@@ -25,6 +25,9 @@ import { SalesDocumentDetail } from './pages/SalesDocumentDetail';
 import { Receivables } from './pages/Receivables';
 import { SupplierInvoices } from './pages/SupplierInvoices';
 import { NewSupplierInvoice } from './pages/NewSupplierInvoice';
+import { AustrianTaxSetup } from './pages/AustrianTaxSetup';
+import { FixedAssets } from './pages/FixedAssets';
+import { StatementImports } from './pages/StatementImports';
 
 function Router() {
   const { user, loading } = useApp();
@@ -87,6 +90,12 @@ function Router() {
         return <SupplierInvoices />;
       case '/new-supplier-invoice':
         return <NewSupplierInvoice />;
+      case '/austrian-tax-setup':
+        return <AustrianTaxSetup />;
+      case '/fixed-assets':
+        return <FixedAssets />;
+      case '/statement-imports':
+        return <StatementImports />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':

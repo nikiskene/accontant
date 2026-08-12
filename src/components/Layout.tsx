@@ -29,12 +29,16 @@ interface NavItem {
   name: string;
   icon: any;
   path: string;
+  country?: string;
 }
 
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies' },
   { name: 'Company Credentials', icon: Building2, path: '/company-profile' },
   { name: 'Company Bank Details', icon: Building2, path: '/company-banks' },
+  { name: 'Austrian Tax Year', icon: ClipboardList, path: '/austrian-tax-setup', country: 'AT' },
+  { name: 'Fixed Assets & AfA', icon: ClipboardList, path: '/fixed-assets', country: 'AT' },
+  { name: 'Statement Imports', icon: Inbox, path: '/statement-imports' },
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { name: 'Quotes & Invoices', icon: Files, path: '/sales-documents' },
   { name: 'Receivables', icon: Files, path: '/receivables' },
@@ -89,7 +93,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-              {navItems.map((item) => {
+              {navItems.filter(item => !item.country || item.country === workspace?.country).map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPath === item.path;
                 return (
