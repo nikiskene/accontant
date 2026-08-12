@@ -67,6 +67,10 @@ Verified on 12 August 2026:
 23. [`018_add_supplier_approval.sql`](./018_add_supplier_approval.sql) — controlled supplier-invoice approval without premature ledger posting.
 24. [`904_verify_payments_and_approvals.sql`](./904_verify_payments_and_approvals.sql) — read-only workflow verification.
 25. [`019_create_austrian_workspace_and_chart.sql`](./019_create_austrian_workspace_and_chart.sql) — Austrian entity with the exact 39-account FreeFinance chart.
+26. [`020_add_austrian_tax_assets_defaults.sql`](./020_add_austrian_tax_assets_defaults.sql) — unverified VAT candidates, document defaults, and fixed assets.
+27. [`021_add_freefinance_import_staging.sql`](./021_add_freefinance_import_staging.sql) — private raw staging with source controls; no ledger promotion.
+28. [`022_add_quickbooks_reconciliation_staging.sql`](./022_add_quickbooks_reconciliation_staging.sql) — non-ledger QuickBooks comparison staging.
+29. [`905_verify_austrian_foundation.sql`](./905_verify_austrian_foundation.sql) — read-only Austrian foundation verification.
 
 ## Deliberately deferred
 
