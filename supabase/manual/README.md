@@ -8,9 +8,9 @@ the Supabase SQL editor.
 
 Verified on 12 August 2026:
 
-- Files 000–007 and 900 were run successfully in project
+- Files 000–008 and 900 were run successfully in project
   `ndktajhxihahgfdcsuij`.
-- File 008 is pending execution.
+- File 009 is pending execution.
 - The verification correctly reports 16 pre-existing unbalanced posted headers
   and 33 pre-existing unclassified submitted trip expenses.
 
@@ -42,11 +42,14 @@ Verified on 12 August 2026:
    period-lock data structure and access policies.
 9. [`008_unify_trip_posting.sql`](./008_unify_trip_posting.sql) — replace the
    conflicting trip RPCs with the UI's single atomic lifecycle.
-10. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
+10. [`009_classify_legacy_trip_expenses.sql`](./009_classify_legacy_trip_expenses.sql)
+    — assign the reviewed accounts and OOS VAT treatment to the 33 legacy trip
+    expenses without posting or changing trip status.
+11. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
 
 ## Deliberately deferred
 
-- Classification and repair of the 33 UAE trip expenses.
+- Ledger repair of the 33 UAE trip expenses after classification is verified.
 - Removal or reversal of the 16 incomplete transaction headers.
 - Austrian workspace creation and FreeFinance import.
 - Enforcement of period locks inside non-trip posting functions.
