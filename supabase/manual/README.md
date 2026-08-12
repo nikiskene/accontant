@@ -13,6 +13,9 @@ Verified on 12 August 2026:
 - Files 008–010 were run successfully. The legacy repair produced three posted
   reversals, three detailed replacement postings, 33 linked source expenses,
   16 void zero-line headers, and zero remaining unbalanced posted transactions.
+- File 900 was rerun after the repair and verified zero unbalanced posted
+  transactions, zero unclassified submitted trip expenses, no duplicate
+  transaction policies, secure membership, and the expected trip-link shape.
 - The verification correctly reports 16 pre-existing unbalanced posted headers
   and 33 pre-existing unclassified submitted trip expenses.
 
