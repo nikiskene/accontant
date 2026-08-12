@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { name: 'Transactions', icon: FileText, path: '/transactions' },
   { name: 'Trips', icon: Plane, path: '/trips' },
   { name: 'Customers', icon: Users, path: '/customers' },
+  { name: 'Suppliers', icon: Users, path: '/suppliers' },
   { name: 'Bank Inbox', icon: Inbox, path: '/bank-inbox' },
   { name: 'Reports', icon: ClipboardList, path: '/reports' },
   { name: 'Settings', icon: Settings, path: '/settings' },

@@ -19,6 +19,7 @@ import { Catalog } from './pages/Catalog';
 import { SalesDocuments } from './pages/SalesDocuments';
 import { CompanyProfile } from './pages/CompanyProfile';
 import { NewQuote } from './pages/NewQuote';
+import { Suppliers } from './pages/Suppliers';
 
 function Router() {
   const { user, loading } = useApp();
@@ -70,6 +71,8 @@ function Router() {
         return <NewQuote />;
       case '/company-profile':
         return <CompanyProfile />;
+      case '/suppliers':
+        return <Suppliers />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':
