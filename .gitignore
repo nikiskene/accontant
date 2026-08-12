@@ -21,3 +21,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Never commit company exports, receipts, statements, or local audit data.
+private-data/
+imports/
+exports/
+*.zip
