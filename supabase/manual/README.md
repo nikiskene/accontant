@@ -46,8 +46,8 @@ Verified on 12 August 2026:
     — assign the reviewed accounts and OOS VAT treatment to the 33 legacy trip
     expenses without posting or changing trip status.
 11. [`010_repair_legacy_trip_postings.sql`](./010_repair_legacy_trip_postings.sql)
-    — atomically create three canonical trip postings, link 33 expenses, and
-    audit-void the 16 known zero-line legacy headers.
+    — reverse three aggregate postings, create reviewed detailed replacements,
+    link 33 expenses, and audit-void the 16 known zero-line legacy headers.
 12. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
 
 ## Deliberately deferred
