@@ -10,7 +10,8 @@ Verified on 12 August 2026:
 
 - Files 000–008 and 900 were run successfully in project
   `ndktajhxihahgfdcsuij`.
-- File 009 was run successfully; file 010 is pending execution.
+- File 009 was run successfully. File 008 must be rerun once to deploy the
+  corrected source-expense status behavior, then file 010 remains pending.
 - The verification correctly reports 16 pre-existing unbalanced posted headers
   and 33 pre-existing unclassified submitted trip expenses.
 

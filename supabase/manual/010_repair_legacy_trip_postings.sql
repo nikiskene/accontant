@@ -166,8 +166,10 @@ begin
       raise exception 'Corrected posting failed for trip %', v_trip.id;
     end if;
 
+    -- Source expenses remain submitted. Their linked posted transaction is the
+    -- accounting authority; "posted" is not a permitted expense status.
     update public.trip_expenses
-    set status = 'posted', transaction_id = v_corrected
+    set transaction_id = v_corrected
     where trip_id = v_trip.id;
 
     insert into public.audit_events (
@@ -184,7 +186,7 @@ begin
   end loop;
 
   select count(*) into v_count from public.trip_expenses
-  where trip_id = any(v_trip_ids) and status = 'posted' and transaction_id is not null;
+  where trip_id = any(v_trip_ids) and status = 'submitted' and transaction_id is not null;
   if v_count <> 33 then raise exception 'Only % of 33 expenses were linked', v_count; end if;
 
   update public.transactions set status = 'void'
@@ -208,12 +210,12 @@ end
 $$;
 
 select jsonb_build_object(
-  'linked_posted_expenses', (
+  'linked_submitted_expenses', (
     select count(*) from public.trip_expenses
     where trip_id = any(array[
       'b558acc5-8d6d-4188-b84a-b330e1591ddf', '755fe831-3a67-4450-96fb-b5868f2ab3dc',
       'f5118091-ab28-4320-8e09-5e19546f0efa'
-    ]::uuid[]) and status = 'posted' and transaction_id is not null
+    ]::uuid[]) and status = 'submitted' and transaction_id is not null
   ),
   'corrected_postings', (
     select count(*) from public.transactions

@@ -313,9 +313,11 @@ begin
 
   perform public.post_transaction(v_transaction_id, auth.uid());
 
+  -- The deployed trip_expenses status constraint has no "posted" state.
+  -- The linked posted transaction is the durable posting authority; the
+  -- reviewed source expense remains submitted.
   update public.trip_expenses
-  set status = 'posted',
-      transaction_id = v_transaction_id
+  set transaction_id = v_transaction_id
   where trip_id = p_trip_id;
 
   update public.trips
