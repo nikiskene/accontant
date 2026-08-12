@@ -35,5 +35,12 @@ select jsonb_build_object(
       and table_name = 'trip_expenses'
       and column_name = 'transaction_id'
   ),
-  'accounting_periods_exists', to_regclass('public.accounting_periods') is not null
+  'accounting_periods_exists', to_regclass('public.accounting_periods') is not null,
+  'trip_posting_link_is_unique', exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'public'
+      and tablename = 'trip_expenses'
+      and indexname = 'trip_expenses_transaction_id_unique'
+  )
 ) as verification;
