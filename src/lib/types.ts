@@ -220,3 +220,35 @@ export interface FilingsDashboard {
   total_assets_aed: number;
   total_vat_aed: number;
 }
+
+export interface ProductService {
+  id: string;
+  workspace_id: string;
+  item_type: 'product' | 'service';
+  sku: string | null;
+  name: string;
+  description: string | null;
+  unit: string;
+  unit_price: number;
+  currency: string;
+  revenue_account_id: string | null;
+  cogs_account_id: string | null;
+  vat_code_id: string | null;
+  is_active: boolean;
+}
+
+export interface SalesDocument {
+  id: string;
+  workspace_id: string;
+  document_type: 'quote' | 'invoice' | 'credit_note';
+  document_number: string | null;
+  customer_id: string;
+  issue_date: string;
+  valid_until: string | null;
+  due_date: string | null;
+  currency: string;
+  status: string;
+  total: number;
+  amount_paid: number;
+  customer?: Pick<Counterparty, 'id' | 'name' | 'company_name'> | null;
+}

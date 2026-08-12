@@ -14,6 +14,9 @@ import { AuditLog } from './pages/AuditLog';
 import { Customers } from './pages/Customers';
 import { CustomerDetail } from './pages/CustomerDetail';
 import { CustomerImport } from './pages/CustomerImport';
+import { CompanySwitcher } from './pages/CompanySwitcher';
+import { Catalog } from './pages/Catalog';
+import { SalesDocuments } from './pages/SalesDocuments';
 
 function Router() {
   const { user, loading } = useApp();
@@ -55,6 +58,12 @@ function Router() {
     switch (currentPath) {
       case '/dashboard':
         return <Dashboard />;
+      case '/companies':
+        return <CompanySwitcher />;
+      case '/catalog':
+        return <Catalog />;
+      case '/sales-documents':
+        return <SalesDocuments />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':
@@ -74,8 +83,8 @@ function Router() {
       case '/audit-log':
         return <AuditLog />;
       default:
-        window.history.pushState({}, '', '/dashboard');
-        return <Dashboard />;
+        window.history.pushState({}, '', '/companies');
+        return <CompanySwitcher />;
     }
   };
 

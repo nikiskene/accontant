@@ -15,6 +15,7 @@ import {
 
 interface AppContextType {
   user: User | null;
+  workspaces: Workspace[];
   workspaceId: string | null;
   workspace: Workspace | null;
   workspaceSettings: WorkspaceSettings | null;
@@ -34,6 +35,7 @@ interface AppContextType {
 
   loading: boolean;
   hasWorkspaceAccess: boolean;
+  selectWorkspace: (id: string) => void;
   signOut: () => Promise<void>;
   refetchReferenceData: () => Promise<void>;
 }
@@ -43,6 +45,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [workspaceSettings, setWorkspaceSettings] = useState<WorkspaceSettings | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -69,8 +72,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (user && !workspaceId) {
-      void loadWorkspace();
+    if (user) {
+      void loadWorkspaces();
     } else if (!user) {
       setLoading(false);
     }
@@ -84,34 +87,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
-  const loadWorkspace = async () => {
+  const loadWorkspaces = async () => {
     try {
       const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user!.id)
-        .maybeSingle();
+        .select('workspace_id, workspaces(*)')
+        .eq('user_id', user!.id);
 
       if (memberError) throw memberError;
 
-      if (memberData) {
-        setWorkspaceId(memberData.workspace_id);
-      } else {
-        const workspaceIdToUse = 'fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9';
-
-        const { error: insertError } = await supabase.from('workspace_members').insert({
-          workspace_id: workspaceIdToUse,
-          user_id: user!.id,
-          role: 'admin',
-        });
-
-        if (insertError) throw insertError;
-        setWorkspaceId(workspaceIdToUse);
-      }
+      const available = (memberData || [])
+        .map((row: any) => row.workspaces as Workspace | null)
+        .filter((item): item is Workspace => Boolean(item));
+      setWorkspaces(available);
+      const saved = localStorage.getItem('accounting-workspace-id');
+      const initial = available.find((item) => item.id === saved) || available[0] || null;
+      setWorkspaceId(initial?.id || null);
+      if (!initial) setLoading(false);
     } catch (error) {
       console.error('Error loading workspace:', error);
       setLoading(false);
     }
+  };
+
+  const selectWorkspace = (id: string) => {
+    if (!workspaces.some((item) => item.id === id)) return;
+    localStorage.setItem('accounting-workspace-id', id);
+    setSelectedTaxYearId(null);
+    setWorkspaceId(id);
   };
 
   const loadReferenceData = async () => {
@@ -183,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setWorkspaceId(null);
+    setWorkspaces([]);
     setWorkspace(null);
     setWorkspaceSettings(null);
     setAccounts([]);
@@ -197,6 +201,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         user,
+        workspaces,
         workspaceId,
         workspace,
         workspaceSettings,
@@ -216,6 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         loading,
         hasWorkspaceAccess,
+        selectWorkspace,
         signOut,
         refetchReferenceData,
       }}

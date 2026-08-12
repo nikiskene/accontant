@@ -54,6 +54,10 @@ Verified on 12 August 2026:
     — reverse three aggregate postings, create reviewed detailed replacements,
     link 33 expenses, and audit-void the 16 known zero-line legacy headers.
 12. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
+13. [`011_add_commercial_documents.sql`](./011_add_commercial_documents.sql) — commercial document and payment tables.
+14. [`012_add_quote_invoice_workflow.sql`](./012_add_quote_invoice_workflow.sql) — numbering and full/partial quote conversion.
+15. [`013_add_commercial_reporting_views.sql`](./013_add_commercial_reporting_views.sql) — receivables and monthly sales views.
+16. [`901_verify_commercial_foundation.sql`](./901_verify_commercial_foundation.sql) — read-only commercial verification.
 
 ## Deliberately deferred
 

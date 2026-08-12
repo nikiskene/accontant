@@ -14,6 +14,9 @@ import {
   X,
   AlertCircle,
   Users,
+  Building2,
+  Package,
+  Files,
 } from 'lucide-react';
 import { Button } from './Button';
 import { Select } from './Select';
@@ -29,7 +32,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { name: 'Companies', icon: Building2, path: '/companies' },
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { name: 'Quotes & Invoices', icon: Files, path: '/sales-documents' },
+  { name: 'Products & Services', icon: Package, path: '/catalog' },
   { name: 'New Sale', icon: Plus, path: '/new-sale' },
   { name: 'New Expense', icon: Receipt, path: '/new-expense' },
   { name: 'Transactions', icon: FileText, path: '/transactions' },
@@ -42,7 +48,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { workspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
+  const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentPath = window.location.pathname;
@@ -124,6 +130,10 @@ export function Layout({ children }: LayoutProps) {
                 <h2 className="ml-4 text-lg font-semibold text-gray-900 lg:hidden">IACy Tax Ledger</h2>
               </div>
 
+              <div className="flex items-center gap-3">
+              {workspaces.length > 0 && <Select value={workspaceId || ''} onChange={(e) => selectWorkspace(e.target.value)} className="min-w-[210px]">
+                {workspaces.map(company => <option key={company.id} value={company.id}>{company.trade_name || company.legal_name}</option>)}
+              </Select>}
               {taxYears.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 hidden lg:inline">Tax Year:</span>
@@ -140,6 +150,7 @@ export function Layout({ children }: LayoutProps) {
                   </Select>
                 </div>
               )}
+              </div>
             </div>
           </header>
 
