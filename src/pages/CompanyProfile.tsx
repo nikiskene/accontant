@@ -1,0 +1,21 @@
+import { FormEvent, useEffect, useState } from 'react';
+import { useApp } from '../contexts/AppContext';
+import { supabase } from '../lib/supabase';
+import { Input } from '../components/Input';
+import { Button } from '../components/Button';
+
+const empty = { legal_form:'',registration_number:'',tax_identification_number:'',vat_number:'',uid_number:'',corporate_tax_number:'',trade_licence_number:'',licensing_authority:'',tax_office:'',address_line_1:'',address_line_2:'',postal_code:'',city:'',state_region:'',billing_email:'billing@iacy.com',phone:'',website:'',authorized_signatory:'',default_payment_terms_days:'14',legal_footer:'' };
+
+export function CompanyProfile() {
+  const { workspaceId, workspace } = useApp();
+  const [form,setForm]=useState<Record<string,string>>(empty); const [message,setMessage]=useState('');
+  useEffect(()=>{ if(!workspaceId)return; supabase.from('company_legal_profiles').select('*').eq('workspace_id',workspaceId).single().then(({data,error})=>{if(data)setForm(Object.fromEntries(Object.entries({...empty,...data}).map(([k,v])=>[k,String(v??'')])));if(error)setMessage(error.message);});},[workspaceId]);
+  const save=async(e:FormEvent)=>{e.preventDefault();if(!workspaceId||!workspace)return;setMessage('Saving…');const {error}=await supabase.from('company_legal_profiles').upsert({...form,workspace_id:workspaceId,country_code:workspace.country,default_payment_terms_days:Number(form.default_payment_terms_days)});setMessage(error?error.message:'Company credentials saved.');};
+  const field=(key:string,label:string)=><Input label={label} value={form[key]||''} onChange={e=>setForm({...form,[key]:e.target.value})}/>;
+  return <div className="max-w-5xl"><h1 className="text-3xl font-bold">Company credentials</h1><p className="text-gray-600 mt-1 mb-6">Legal identity used for this company’s documents. Issued documents keep an immutable snapshot.</p>
+    <form onSubmit={save} className="space-y-6"><section className="bg-white border rounded-xl p-6"><h2 className="text-lg font-semibold mb-4">Legal registration</h2><div className="grid md:grid-cols-2 gap-4">
+      <Input label="Registered name" value={workspace?.legal_name||''} disabled/>{field('legal_form','Legal form')}{field('registration_number','Company / registration number')}{field('tax_identification_number','Tax identification number')}{field('vat_number','VAT number / UAE TRN')}{field('uid_number','Austrian UID')}{field('corporate_tax_number','UAE corporate tax number')}{field('trade_licence_number','Trade licence number')}{field('licensing_authority','Licensing authority / free zone')}{field('tax_office','Finanzamt / tax office')}</div></section>
+      <section className="bg-white border rounded-xl p-6"><h2 className="text-lg font-semibold mb-4">Registered address</h2><div className="grid md:grid-cols-2 gap-4">{field('address_line_1','Address line 1')}{field('address_line_2','Address line 2')}{field('postal_code','Postal code')}{field('city','City')}{field('state_region','State / region')}</div></section>
+      <section className="bg-white border rounded-xl p-6"><h2 className="text-lg font-semibold mb-4">Document contact</h2><div className="grid md:grid-cols-2 gap-4">{field('billing_email','Billing email')}{field('phone','Phone')}{field('website','Website')}{field('authorized_signatory','Authorized signatory')}{field('default_payment_terms_days','Default payment terms (days)')}</div><div className="mt-4">{field('legal_footer','Legal footer')}</div></section>
+      <div className="flex items-center gap-3"><Button type="submit">Save credentials</Button>{message&&<span className="text-sm text-gray-600">{message}</span>}</div></form></div>;
+}

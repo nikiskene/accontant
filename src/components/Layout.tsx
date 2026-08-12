@@ -33,6 +33,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies' },
+  { name: 'Company Credentials', icon: Building2, path: '/company-profile' },
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { name: 'Quotes & Invoices', icon: Files, path: '/sales-documents' },
   { name: 'Products & Services', icon: Package, path: '/catalog' },

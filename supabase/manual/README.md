@@ -58,6 +58,9 @@ Verified on 12 August 2026:
 14. [`012_add_quote_invoice_workflow.sql`](./012_add_quote_invoice_workflow.sql) — numbering and full/partial quote conversion.
 15. [`013_add_commercial_reporting_views.sql`](./013_add_commercial_reporting_views.sql) — receivables and monthly sales views.
 16. [`901_verify_commercial_foundation.sql`](./901_verify_commercial_foundation.sql) — read-only commercial verification.
+17. [`014_add_company_legal_profiles.sql`](./014_add_company_legal_profiles.sql) — entity credentials, bank details, and immutable document snapshots.
+18. [`015_add_document_issue_workflow.sql`](./015_add_document_issue_workflow.sql) — validate and snapshot issued documents plus quote acceptance.
+19. [`902_verify_legal_profiles.sql`](./902_verify_legal_profiles.sql) — read-only legal-profile verification.
 
 ## Deliberately deferred
 
