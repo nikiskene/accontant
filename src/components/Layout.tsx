@@ -34,8 +34,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies' },
   { name: 'Company Credentials', icon: Building2, path: '/company-profile' },
+  { name: 'Company Bank Details', icon: Building2, path: '/company-banks' },
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { name: 'Quotes & Invoices', icon: Files, path: '/sales-documents' },
+  { name: 'Receivables', icon: Files, path: '/receivables' },
   { name: 'Products & Services', icon: Package, path: '/catalog' },
   { name: 'New Sale', icon: Plus, path: '/new-sale' },
   { name: 'New Expense', icon: Receipt, path: '/new-expense' },
@@ -43,6 +45,7 @@ const navItems: NavItem[] = [
   { name: 'Trips', icon: Plane, path: '/trips' },
   { name: 'Customers', icon: Users, path: '/customers' },
   { name: 'Suppliers', icon: Users, path: '/suppliers' },
+  { name: 'Supplier Invoices', icon: Receipt, path: '/supplier-invoices' },
   { name: 'Bank Inbox', icon: Inbox, path: '/bank-inbox' },
   { name: 'Reports', icon: ClipboardList, path: '/reports' },
   { name: 'Settings', icon: Settings, path: '/settings' },

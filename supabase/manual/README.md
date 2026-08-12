@@ -61,6 +61,8 @@ Verified on 12 August 2026:
 17. [`014_add_company_legal_profiles.sql`](./014_add_company_legal_profiles.sql) — entity credentials, bank details, and immutable document snapshots.
 18. [`015_add_document_issue_workflow.sql`](./015_add_document_issue_workflow.sql) — validate and snapshot issued documents plus quote acceptance.
 19. [`902_verify_legal_profiles.sql`](./902_verify_legal_profiles.sql) — read-only legal-profile verification.
+20. [`016_add_supplier_invoices.sql`](./016_add_supplier_invoices.sql) — supplier invoices, classified lines, and receipt links.
+21. [`903_verify_operations.sql`](./903_verify_operations.sql) — read-only supplier operations verification.
 
 ## Deliberately deferred
 

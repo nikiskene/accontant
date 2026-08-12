@@ -20,6 +20,10 @@ import { SalesDocuments } from './pages/SalesDocuments';
 import { CompanyProfile } from './pages/CompanyProfile';
 import { NewQuote } from './pages/NewQuote';
 import { Suppliers } from './pages/Suppliers';
+import { CompanyBanks } from './pages/CompanyBanks';
+import { SalesDocumentDetail } from './pages/SalesDocumentDetail';
+import { Receivables } from './pages/Receivables';
+import { SupplierInvoices } from './pages/SupplierInvoices';
 
 function Router() {
   const { user, loading } = useApp();
@@ -50,6 +54,7 @@ function Router() {
   }
 
   const getPage = () => {
+    if (currentPath.startsWith('/sales-documents/')) return <SalesDocumentDetail id={currentPath.split('/')[2]} />;
     if (currentPath.startsWith('/customers/')) {
       const customerId = currentPath.split('/')[2];
       if (customerId === 'import') {
@@ -73,6 +78,12 @@ function Router() {
         return <CompanyProfile />;
       case '/suppliers':
         return <Suppliers />;
+      case '/company-banks':
+        return <CompanyBanks />;
+      case '/receivables':
+        return <Receivables />;
+      case '/supplier-invoices':
+        return <SupplierInvoices />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':
