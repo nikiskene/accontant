@@ -1,0 +1,1 @@
+export { BankInbox } from './BankInbox/BankInboxPage';
