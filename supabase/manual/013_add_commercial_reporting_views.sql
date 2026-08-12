@@ -6,9 +6,10 @@ select d.workspace_id, d.id invoice_id, d.document_number, d.customer_id, d.issu
 from public.sales_documents d where d.document_type='invoice' and d.status<>'void';
 
 create or replace view public.v_sales_analysis_monthly with (security_invoker = true) as
-select workspace_id, date_trunc('month',issue_date)::date month,
-  extract(year from issue_date)::integer fiscal_year, currency, count(*) invoices,
-  round(sum(total),2) invoiced_revenue, round(sum(amount_paid),2) collected_revenue
+select workspace_id, date_trunc('month', issue_date)::date as period_month,
+  extract(year from issue_date)::integer as fiscal_year, currency,
+  count(*) as invoices, round(sum(total),2) as invoiced_revenue,
+  round(sum(amount_paid),2) as collected_revenue
 from public.sales_documents where document_type='invoice' and status<>'void'
 group by workspace_id,date_trunc('month',issue_date),extract(year from issue_date),currency;
 
