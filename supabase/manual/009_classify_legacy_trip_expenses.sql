@@ -1,14 +1,7 @@
 -- Classify the 33 reviewed legacy 2025 trip expenses.
 -- This does not post, void, delete, or change any trip status.
 
-begin;
-
-create temporary table _trip_classification (
-  expense_id uuid primary key,
-  account_code text not null
-) on commit drop;
-
-insert into _trip_classification (expense_id, account_code) values
+with proposed(expense_id, account_code) as (values
   -- Silicon Valley: transport
   ('4a70efcd-c8d8-47b0-a914-12b6f13c9f1b', '6420'),
   ('fb0a671e-59e0-4be8-98c8-458f559d5155', '6420'),
@@ -45,58 +38,43 @@ insert into _trip_classification (expense_id, account_code) values
   ('35618bad-55f0-49b2-bbcd-a7ccbd7cb3ef', '6420'),
   ('b0cffc41-0a93-4ddd-9a37-cf87bff7e409', '6420'),
   ('2c37f475-b013-4fae-b880-4612969e71ba', '6100'),
-  ('4e9fa902-4c4c-4290-b8b0-99f5bd0479e0', '6100');
-
-do $$
-declare
-  v_workspace constant uuid := 'fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9';
-  v_resolved integer;
-begin
-  if (select count(*) from _trip_classification) <> 33 then
-    raise exception 'Expected 33 proposed classifications';
-  end if;
-
-  select count(*) into v_resolved
-  from _trip_classification c
-  join trip_expenses te on te.id = c.expense_id and te.workspace_id = v_workspace
-  join accounts a on a.workspace_id = v_workspace
-                 and a.code = c.account_code and a.is_active
-  cross join vat_codes v
-  where v.workspace_id = v_workspace and v.code = 'OOS';
-
-  if v_resolved <> 33 then
-    raise exception 'Only % of 33 classifications resolved; rolling back', v_resolved;
-  end if;
-end $$;
-
-update trip_expenses te
-set account_id = a.id,
-    vat_code_id = v.id
-from _trip_classification c
-join accounts a
-  on a.workspace_id = 'fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9'
- and a.code = c.account_code
- and a.is_active
-join vat_codes v
-  on v.workspace_id = a.workspace_id
- and v.code = 'OOS'
-where te.id = c.expense_id
-  and te.workspace_id = 'fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9'
-  and (te.account_id is distinct from a.id or te.vat_code_id is distinct from v.id);
-
-do $$
-begin
-  if exists (
-    select 1
-    from _trip_classification c
-    join trip_expenses te on te.id = c.expense_id
-    where te.account_id is null or te.vat_code_id is null
-  ) then
-    raise exception 'At least one expense remains unclassified; rolling back';
-  end if;
-end $$;
-
-commit;
+  ('4e9fa902-4c4c-4290-b8b0-99f5bd0479e0', '6100')
+), resolved as (
+  select
+    p.expense_id::uuid as expense_id,
+    a.id as account_id,
+    v.id as vat_code_id
+  from proposed p
+  join trip_expenses te
+    on te.id = p.expense_id::uuid
+   and te.workspace_id = 'fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9'
+  join accounts a
+    on a.workspace_id = te.workspace_id
+   and a.code = p.account_code
+   and a.is_active
+  join vat_codes v
+    on v.workspace_id = te.workspace_id
+   and v.code = 'OOS'
+), guard as (
+  select count(*) as resolved_count from resolved
+), updated as (
+  update trip_expenses te
+  set account_id = r.account_id,
+      vat_code_id = r.vat_code_id
+  from resolved r
+  where te.id = r.expense_id
+    and (select resolved_count from guard) = 33
+    and (te.account_id is distinct from r.account_id
+      or te.vat_code_id is distinct from r.vat_code_id)
+  returning te.id
+)
+select
+  (select resolved_count from guard) as resolved_expenses,
+  (select count(*) from updated) as changed_expenses,
+  case
+    when (select resolved_count from guard) = 33 then 'classification complete'
+    else 'nothing changed: expected 33 resolved expenses'
+  end as result;
 
 select
   t.name as trip_name,
