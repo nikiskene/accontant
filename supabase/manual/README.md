@@ -10,8 +10,9 @@ Verified on 12 August 2026:
 
 - Files 000–008 and 900 were run successfully in project
   `ndktajhxihahgfdcsuij`.
-- File 009 was run successfully. File 008 must be rerun once to deploy the
-  corrected source-expense status behavior, then file 010 remains pending.
+- Files 008–010 were run successfully. The legacy repair produced three posted
+  reversals, three detailed replacement postings, 33 linked source expenses,
+  16 void zero-line headers, and zero remaining unbalanced posted transactions.
 - The verification correctly reports 16 pre-existing unbalanced posted headers
   and 33 pre-existing unclassified submitted trip expenses.
 
