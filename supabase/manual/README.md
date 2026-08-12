@@ -4,12 +4,22 @@ These files target the existing live database. They are intentionally separate
 from the historical Bolt migrations and are designed to be run individually in
 the Supabase SQL editor.
 
+## Live execution status
+
+Verified on 12 August 2026:
+
+- Files 000–007 and 900 were run successfully in project
+  `ndktajhxihahgfdcsuij`.
+- File 008 is pending execution.
+- The verification correctly reports 16 pre-existing unbalanced posted headers
+  and 33 pre-existing unclassified submitted trip expenses.
+
 ## Before running
 
 1. Confirm the target project is `ndktajhxihahgfdcsuij`.
 2. Take a Supabase database backup or confirm point-in-time recovery.
 3. Run each file in order and stop if any file errors.
-4. Run `900_verify_hardening.sql` after files 001–007.
+4. Run `900_verify_hardening.sql` after files 001–008.
 5. Do not run repair SQL for the 16 empty transaction headers yet. The 33 source
    expenses require accounting and VAT classification first.
 
@@ -27,17 +37,19 @@ the Supabase SQL editor.
 6. [`005_require_trip_classification.sql`](./005_require_trip_classification.sql)
    — reject future submission/posting without account and VAT classification.
 7. [`006_link_trip_postings.sql`](./006_link_trip_postings.sql) — add a durable,
-   nullable one-to-one link between a trip expense and its posted transaction.
+   nullable many-expenses-to-one-transaction posting link.
 8. [`007_add_accounting_periods.sql`](./007_add_accounting_periods.sql) — add the
    period-lock data structure and access policies.
-9. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
+9. [`008_unify_trip_posting.sql`](./008_unify_trip_posting.sql) — replace the
+   conflicting trip RPCs with the UI's single atomic lifecycle.
+10. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
 
 ## Deliberately deferred
 
 - Classification and repair of the 33 UAE trip expenses.
 - Removal or reversal of the 16 incomplete transaction headers.
 - Austrian workspace creation and FreeFinance import.
-- Enforcement of period locks inside every posting function.
+- Enforcement of period locks inside non-trip posting functions.
 - Invoice, credit-note, payment-allocation, fixed-asset, and approval schemas.
 
 Those changes depend on accountant/auditor decisions or additional application

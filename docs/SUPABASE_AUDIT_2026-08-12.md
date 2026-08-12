@@ -61,3 +61,23 @@ accounts.
 - None of the SQL in `supabase/manual/` has been executed merely because it is in
   GitHub.
 - No QuickBooks/FreeFinance export or financial document belongs in this repo.
+
+## Applied hardening
+
+The user executed manual files 000–007 and 900 successfully on 12 August 2026.
+Verified results include:
+
+- workspace self-enrolment policy removed;
+- duplicate transaction policies removed;
+- writer/admin mutation policies active;
+- zero-line balance validation corrected;
+- trip classification trigger active;
+- trip posting link column present;
+- accounting-period table present;
+- 16 incomplete posted headers and 33 unclassified submitted expenses preserved
+  for controlled repair.
+
+Inspection of the deployed trip RPC bodies then found five competing workflows.
+They reference incompatible statuses and columns, use both per-expense and
+consolidated posting, and include hard-coded account behavior. Manual file 008
+replaces them with the lifecycle used by the current frontend.

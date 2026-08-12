@@ -1,4 +1,5 @@
--- Adds a durable link without changing or guessing any existing relationship.
+-- Adds a durable many-expenses-to-one-transaction link without changing or
+-- guessing any existing relationship.
 
 begin;
 
@@ -22,7 +23,9 @@ begin
 end
 $$;
 
-create unique index if not exists trip_expenses_transaction_id_unique
+drop index if exists public.trip_expenses_transaction_id_unique;
+
+create index if not exists trip_expenses_transaction_id_idx
   on public.trip_expenses(transaction_id)
   where transaction_id is not null;
 
