@@ -10,7 +10,7 @@ Verified on 12 August 2026:
 
 - Files 000–008 and 900 were run successfully in project
   `ndktajhxihahgfdcsuij`.
-- File 009 is pending execution.
+- File 009 was run successfully; file 010 is pending execution.
 - The verification correctly reports 16 pre-existing unbalanced posted headers
   and 33 pre-existing unclassified submitted trip expenses.
 
@@ -45,11 +45,14 @@ Verified on 12 August 2026:
 10. [`009_classify_legacy_trip_expenses.sql`](./009_classify_legacy_trip_expenses.sql)
     — assign the reviewed accounts and OOS VAT treatment to the 33 legacy trip
     expenses without posting or changing trip status.
-11. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
+11. [`010_repair_legacy_trip_postings.sql`](./010_repair_legacy_trip_postings.sql)
+    — atomically create three canonical trip postings, link 33 expenses, and
+    audit-void the 16 known zero-line legacy headers.
+12. [`900_verify_hardening.sql`](./900_verify_hardening.sql) — read-only checks.
 
 ## Deliberately deferred
 
-- Ledger repair of the 33 UAE trip expenses after classification is verified.
+- Accountant/auditor review of the repaired UAE trip postings.
 - Removal or reversal of the 16 incomplete transaction headers.
 - Austrian workspace creation and FreeFinance import.
 - Enforcement of period locks inside non-trip posting functions.
