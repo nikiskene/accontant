@@ -63,6 +63,10 @@ Verified on 12 August 2026:
 19. [`902_verify_legal_profiles.sql`](./902_verify_legal_profiles.sql) — read-only legal-profile verification.
 20. [`016_add_supplier_invoices.sql`](./016_add_supplier_invoices.sql) — supplier invoices, classified lines, and receipt links.
 21. [`903_verify_operations.sql`](./903_verify_operations.sql) — read-only supplier operations verification.
+22. [`017_add_payments_credits_reminders.sql`](./017_add_payments_credits_reminders.sql) — payment allocation, credit notes, and reminder history.
+23. [`018_add_supplier_approval.sql`](./018_add_supplier_approval.sql) — controlled supplier-invoice approval without premature ledger posting.
+24. [`904_verify_payments_and_approvals.sql`](./904_verify_payments_and_approvals.sql) — read-only workflow verification.
+25. [`019_create_austrian_workspace_and_chart.sql`](./019_create_austrian_workspace_and_chart.sql) — Austrian entity with the exact 39-account FreeFinance chart.
 
 ## Deliberately deferred
 

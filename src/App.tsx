@@ -24,6 +24,7 @@ import { CompanyBanks } from './pages/CompanyBanks';
 import { SalesDocumentDetail } from './pages/SalesDocumentDetail';
 import { Receivables } from './pages/Receivables';
 import { SupplierInvoices } from './pages/SupplierInvoices';
+import { NewSupplierInvoice } from './pages/NewSupplierInvoice';
 
 function Router() {
   const { user, loading } = useApp();
@@ -84,6 +85,8 @@ function Router() {
         return <Receivables />;
       case '/supplier-invoices':
         return <SupplierInvoices />;
+      case '/new-supplier-invoice':
+        return <NewSupplierInvoice />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':
