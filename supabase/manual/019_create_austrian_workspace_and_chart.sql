@@ -3,7 +3,13 @@
 begin;
 do $$declare v_ws uuid;v_owner constant uuid:='c0a1df38-31e5-4feb-9c31-82ad11cc9af0';begin
 select id into v_ws from public.workspaces where legal_name='IACy | Nikolaus SKENE' and country='AT';
-if v_ws is null then insert into public.workspaces(legal_name,trade_name,country,base_currency)values('IACy | Nikolaus SKENE','IACy','AT','EUR')returning id into v_ws;end if;
+if v_ws is null then
+  insert into public.workspaces(
+    legal_name,trade_name,country,base_currency,owner_user_id
+  ) values (
+    'IACy | Nikolaus SKENE','IACy','AT','EUR',v_owner
+  ) returning id into v_ws;
+end if;
 insert into public.workspace_members(workspace_id,user_id,role)values(v_ws,v_owner,'owner')on conflict do nothing;
 insert into public.workspace_settings(workspace_id)values(v_ws)on conflict(workspace_id)do nothing;
 insert into public.tax_years(workspace_id,label,start_date,end_date,status,is_default)values(v_ws,'2025','2025-01-01','2025-12-31','open',true)on conflict do nothing;
