@@ -9,6 +9,7 @@ export function Settings() {
   const { workspaceId, workspace, workspaceSettings, accounts, costCenters, vatCodes, refetchReferenceData } = useApp();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const [workspaceForm, setWorkspaceForm] = useState({
     legal_name: workspace?.legal_name || '',
@@ -52,23 +53,29 @@ export function Settings() {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
+    setError('');
 
     try {
-      await supabase
+      const workspaceResult = await supabase
         .from('workspaces')
         .update(workspaceForm)
         .eq('id', workspaceId);
+      if (workspaceResult.error) throw workspaceResult.error;
 
-      await supabase
+      const normalizedSettings = Object.fromEntries(
+        Object.entries(settingsForm).map(([key,value]) => [key,value || null])
+      );
+      const settingsResult = await supabase
         .from('workspace_settings')
-        .update(settingsForm)
+        .update(normalizedSettings)
         .eq('workspace_id', workspaceId);
+      if (settingsResult.error) throw settingsResult.error;
 
       await refetchReferenceData();
       setSuccess(true);
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+    } catch (caught) {
+      console.error('Error saving settings:', caught);
+      setError(caught instanceof Error ? caught.message : 'Failed to save settings');
     } finally {
       setLoading(false);
     }
@@ -113,17 +120,18 @@ export function Settings() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Default Accounts</h2>
           <div className="space-y-4">
             <Select
-              label="Default Bank Account"
+              label="Default bank ledger account"
               value={settingsForm.default_bank_account_id}
               onChange={(e) => setSettingsForm({ ...settingsForm, default_bank_account_id: e.target.value })}
             >
               <option value="">Select account...</option>
-              {accounts.filter(a => a.account_type === 'asset').map((a) => (
+              {accounts.filter(a => a.type === 'asset').map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.code} - {a.name}
                 </option>
               ))}
             </Select>
+            <p className="-mt-2 text-xs text-gray-500">This is the chart-of-accounts posting destination (for Austria, normally 2800 Bank). IBAN and account-holder details are managed separately under Company Bank Details.</p>
 
             <Select
               label="Default Cost Center"
@@ -146,7 +154,7 @@ export function Settings() {
               <option value="">Select VAT code...</option>
               {vatCodes.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.code} - {v.description}
+                  {v.code} - {v.name}
                 </option>
               ))}
             </Select>
@@ -157,7 +165,7 @@ export function Settings() {
               onChange={(e) => setSettingsForm({ ...settingsForm, default_revenue_account_id: e.target.value })}
             >
               <option value="">Select account...</option>
-              {accounts.filter(a => a.account_type === 'revenue').map((a) => (
+              {accounts.filter(a => a.type === 'income').map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.code} - {a.name}
                 </option>
@@ -170,7 +178,7 @@ export function Settings() {
               onChange={(e) => setSettingsForm({ ...settingsForm, default_expense_account_id: e.target.value })}
             >
               <option value="">Select account...</option>
-              {accounts.filter(a => a.account_type === 'expense').map((a) => (
+              {accounts.filter(a => a.type === 'expense' || a.type === 'cogs').map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.code} - {a.name}
                 </option>
@@ -184,6 +192,7 @@ export function Settings() {
             Settings saved successfully!
           </div>
         )}
+        {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={loading}>
