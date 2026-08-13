@@ -28,6 +28,7 @@ import { NewSupplierInvoice } from './pages/NewSupplierInvoice';
 import { AustrianTaxSetup } from './pages/AustrianTaxSetup';
 import { FixedAssets } from './pages/FixedAssets';
 import { StatementImports } from './pages/StatementImports';
+import { DocumentTemplates } from './pages/DocumentTemplates';
 
 function Router() {
   const { user, loading } = useApp();
@@ -96,6 +97,8 @@ function Router() {
         return <FixedAssets />;
       case '/statement-imports':
         return <StatementImports />;
+      case '/document-templates':
+        return <DocumentTemplates />;
       case '/new-sale':
         return <NewSale />;
       case '/new-expense':

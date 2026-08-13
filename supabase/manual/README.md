@@ -71,14 +71,23 @@ Verified on 12 August 2026:
 27. [`021_add_freefinance_import_staging.sql`](./021_add_freefinance_import_staging.sql) — private raw staging with source controls; no ledger promotion.
 28. [`022_add_quickbooks_reconciliation_staging.sql`](./022_add_quickbooks_reconciliation_staging.sql) — non-ledger QuickBooks comparison staging.
 29. [`905_verify_austrian_foundation.sql`](./905_verify_austrian_foundation.sql) — read-only Austrian foundation verification.
+30. [`023_add_austrian_tax_year_and_finanzonline.sql`](./023_add_austrian_tax_year_and_finanzonline.sql) — annual/periodic VAT settings and versioned FinanzOnline mappings.
+31. [`024_add_austrian_afa_workflow.sql`](./024_add_austrian_afa_workflow.sql) — Austrian fixed-asset and depreciation workflow.
+32. [`025_add_bank_statement_review.sql`](./025_add_bank_statement_review.sql) — reviewed bank-statement import staging.
+33. [`026_add_austrian_cross_border_tax_treatments.sql`](./026_add_austrian_cross_border_tax_treatments.sql) — explicitly unverified cross-border VAT candidates.
+34. [`906_verify_austrian_2026_foundation.sql`](./906_verify_austrian_2026_foundation.sql) — read-only Austrian tax and banking verification.
+35. [`027_add_statement_upload_and_controlled_import.sql`](./027_add_statement_upload_and_controlled_import.sql) — private statement uploads and controlled import.
+36. [`907_verify_statement_upload.sql`](./907_verify_statement_upload.sql) — read-only statement-upload verification.
+37. [`028_add_document_layout_settings.sql`](./028_add_document_layout_settings.sql) — document header/font settings and private logo upload types.
+38. [`908_verify_document_layout.sql`](./908_verify_document_layout.sql) — read-only document-layout verification.
 
 ## Deliberately deferred
 
 - Accountant/auditor review of the repaired UAE trip postings.
 - Removal or reversal of the 16 incomplete transaction headers.
-- Austrian workspace creation and FreeFinance import.
 - Enforcement of period locks inside non-trip posting functions.
-- Invoice, credit-note, payment-allocation, fixed-asset, and approval schemas.
+- Accountant verification of Austrian FinanzOnline and cross-border VAT mappings.
+- Promotion of any FreeFinance or QuickBooks staging data into the ledger.
 
 Those changes depend on accountant/auditor decisions or additional application
 work and should not be bundled into the security foundation.

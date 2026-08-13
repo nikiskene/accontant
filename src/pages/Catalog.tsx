@@ -14,7 +14,7 @@ export function Catalog() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ item_type: 'service', name: '', sku: '', unit: 'each', unit_price: '0', revenue_account_id: '', vat_code_id: '' });
+  const [form, setForm] = useState({ item_type: 'service', name: '', sku: '', unit: 'each', unit_price: '0', currency: workspace?.base_currency||'EUR', revenue_account_id: '', vat_code_id: '' });
 
   const load = async () => {
     if (!workspaceId) return;
@@ -30,7 +30,7 @@ export function Catalog() {
     const payload = {
       workspace_id: workspaceId, item_type: form.item_type, name: form.name,
       sku: form.sku || null, unit: form.unit, unit_price: Number(form.unit_price),
-      currency: workspace.base_currency, revenue_account_id: form.revenue_account_id || null,
+      currency: form.currency, revenue_account_id: form.revenue_account_id || null,
       vat_code_id: form.vat_code_id || null,
     };
     const request = editingId
@@ -38,16 +38,16 @@ export function Catalog() {
       : supabase.from('products_services').insert(payload);
     const { error: saveError } = await request;
     if (saveError) return setError(saveError.message);
-    setOpen(false); setEditingId(null); setForm({ item_type: 'service', name: '', sku: '', unit: 'each', unit_price: '0', revenue_account_id: '', vat_code_id: '' });
+    setOpen(false); setEditingId(null); setForm({ item_type: 'service', name: '', sku: '', unit: 'each', unit_price: '0', currency:workspace.base_currency, revenue_account_id: '', vat_code_id: '' });
     void load();
   };
 
   const edit = (item: ProductService) => {
     setEditingId(item.id);
-    setForm({ item_type:item.item_type, name:item.name, sku:item.sku||'', unit:item.unit, unit_price:String(item.unit_price), revenue_account_id:item.revenue_account_id||'', vat_code_id:item.vat_code_id||'' });
+    setForm({ item_type:item.item_type, name:item.name, sku:item.sku||'', unit:item.unit, unit_price:String(item.unit_price), currency:item.currency, revenue_account_id:item.revenue_account_id||'', vat_code_id:item.vat_code_id||'' });
     setError(''); setOpen(true);
   };
-  const close = () => { setOpen(false); setEditingId(null); setForm({ item_type:'service',name:'',sku:'',unit:'each',unit_price:'0',revenue_account_id:'',vat_code_id:'' }); };
+  const close = () => { setOpen(false); setEditingId(null); setForm({ item_type:'service',name:'',sku:'',unit:'each',unit_price:'0',currency:workspace?.base_currency||'EUR',revenue_account_id:'',vat_code_id:'' }); };
 
   return <div>
     <div className="flex justify-between items-start mb-6"><div><h1 className="text-3xl font-bold">Products & services</h1><p className="text-gray-600 mt-1">Reusable sales items for this company.</p></div>
@@ -60,7 +60,7 @@ export function Catalog() {
     <Modal isOpen={open} onClose={close} title={editingId?'Edit product or service':'Add product or service'}><form onSubmit={save} className="space-y-4">
       <Select label="Type" value={form.item_type} onChange={e => setForm({...form, item_type:e.target.value})}><option value="service">Service</option><option value="product">Product</option></Select>
       <Input required label="Name" value={form.name} onChange={e => setForm({...form, name:e.target.value})}/><div className="grid grid-cols-2 gap-3"><Input label="SKU" value={form.sku} onChange={e => setForm({...form, sku:e.target.value})}/><Input label="Unit" value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}/></div>
-      <Input required type="number" step="0.01" label={`Unit price (${workspace?.base_currency || ''})`} value={form.unit_price} onChange={e => setForm({...form, unit_price:e.target.value})}/>
+      <div className="grid grid-cols-2 gap-3"><Input required type="number" step="0.01" label="Unit price" value={form.unit_price} onChange={e => setForm({...form, unit_price:e.target.value})}/><Select label="Currency" value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}>{['EUR','USD','AED','GBP','CHF'].map(currency=><option key={currency}>{currency}</option>)}</Select></div>
       <Select label="Revenue account" value={form.revenue_account_id} onChange={e => setForm({...form, revenue_account_id:e.target.value})}><option value="">Select later</option>{accounts.filter(a=>a.type==='income').map(a=><option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</Select>
       <Select label="VAT code" value={form.vat_code_id} onChange={e => setForm({...form, vat_code_id:e.target.value})}><option value="">Select later</option>{vatCodes.filter(v=>v.applies_to!=='purchases').map(v=><option key={v.id} value={v.id}>{v.code} · {v.name}</option>)}</Select>
       <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit">{editingId?'Update item':'Save item'}</Button></div>

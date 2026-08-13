@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media (max-width: 640px) {
+  main h1 { font-size: 1.75rem !important; line-height: 2.1rem !important; }
+  main h2 { line-height: 1.6rem; }
+  main button, main input, main select { min-height: 44px; }
+  main table { min-width: 680px; }
+  main table th, main table td { white-space: nowrap; }
+  main .overflow-hidden:has(> table) { overflow-x: auto; }
+}
