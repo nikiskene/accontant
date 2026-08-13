@@ -72,7 +72,7 @@ do $$declare c record;v_id uuid;v_ws constant uuid:='fb3a9c15-a7b2-4c57-b7d5-24e
     company_name=c.company_name,alias=coalesce(nullif(alias,''),c.alias),
     street_address=coalesce(nullif(street_address,''),c.street_address),zip=coalesce(nullif(zip,''),c.zip),
     city=coalesce(nullif(city,''),c.city),state=coalesce(nullif(state,''),c.state),
-    country=coalesce(nullif(country,''),c.country),vat_trn=coalesce(nullif(vat_trn,''),c.vat_trn),updated_at=now()where id=v_id;
+    country=coalesce(nullif(country,''),c.country),vat_trn=coalesce(nullif(vat_trn,''),c.vat_trn)where id=v_id;
   end if;
   insert into pdf_customer_map values(c.key,v_id);
  end loop;
