@@ -26,4 +26,6 @@ dist-ssr
 private-data/
 imports/
 exports/
+tmp/
+supabase/.temp/
 *.zip
