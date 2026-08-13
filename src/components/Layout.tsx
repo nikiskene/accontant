@@ -40,7 +40,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies', section: 'Company' },
   { name: 'Company Credentials', icon: Building2, path: '/company-profile', section: 'Company' },
-  { name: 'Company Bank Details', icon: Building2, path: '/company-banks', section: 'Company' },
+  { name: 'Bank Details', icon: Building2, path: '/company-banks', section: 'Company' },
   { name: 'Tax Years', icon: ClipboardList, path: '/austrian-tax-setup', section: 'Company' },
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', section: 'Accounting' },
   { name: 'Quotes & Invoices', icon: Files, path: '/sales-documents', section: 'Sales' },
@@ -109,7 +109,7 @@ export function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">{item.name}</span>
+                    <span className="whitespace-nowrap text-sm font-medium xl:text-base">{item.name}</span>
                   </button></div>
                 );
               })}
