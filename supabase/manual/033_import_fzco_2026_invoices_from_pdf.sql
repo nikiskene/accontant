@@ -36,7 +36,11 @@ do $$begin
     raise exception'One or more target invoice numbers already exist; import stopped';end if;
 end$$;
 
-create temporary table pdf_customers on commit drop as
+drop table if exists pg_temp.pdf_customers;
+drop table if exists pg_temp.pdf_customer_map;
+drop table if exists pg_temp.pdf_invoices;
+
+create temporary table pdf_customers as
 select*from jsonb_to_recordset($data$[
  {"key":"johann_stan","company_name":"Johann Stan","alias":"Johann Stan"},
  {"key":"asma_aljassmi","company_name":"Asma Aljassmi","alias":"Asma Aljassmi"},
@@ -55,7 +59,7 @@ select*from jsonb_to_recordset($data$[
  {"key":"storsendigital","company_name":"STORSENDIGITAL S.R.O.","alias":"Tarik Altumbabic","street_address":"Dlouha 730/35","zip":"110 000","city":"Praha 1","country":"Czechia","vat_trn":"CZ10696130"}
 ]$data$::jsonb)as x(key text,company_name text,alias text,street_address text,zip text,city text,state text,country text,vat_trn text);
 
-create temporary table pdf_customer_map(key text primary key,customer_id uuid not null)on commit drop;
+create temporary table pdf_customer_map(key text primary key,customer_id uuid not null);
 do $$declare c record;v_id uuid;v_ws constant uuid:='fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9';begin
  for c in select*from pdf_customers loop
   select id into v_id from public.counterparties where workspace_id=v_ws and(
@@ -78,7 +82,7 @@ do $$declare c record;v_id uuid;v_ws constant uuid:='fb3a9c15-a7b2-4c57-b7d5-24e
  end loop;
 end$$;
 
-create temporary table pdf_invoices on commit drop as
+create temporary table pdf_invoices as
 select*from jsonb_to_recordset($invoices$[
  {"number":"1176","page":2,"customer_key":"johann_stan","issue_date":"2026-01-13","due_date":"2026-01-13","currency":"EUR","status":"paid","total":3750,"lines":[{"description":"Silicon Valley Inspiration Tour Aug 17-21, 2026. Participant: Johann Stan. 1st partial payment (50% - rest due in July)","quantity":0.5,"unit_price":7500,"net":3750,"vat":0,"gross":3750,"vat_code":"ZR0"}]},
  {"number":"1177","page":3,"customer_key":"johann_stan","issue_date":"2026-01-15","due_date":"2026-01-15","currency":"EUR","status":"paid","total":4250,"lines":[{"description":"China Inspiration Tour: Shenzhen & Hongkong, March 23-27, 2026. Participant: Johann Stan","quantity":0,"unit_price":8500,"net":0,"vat":0,"gross":0,"vat_code":"ZR0"},{"description":"China Inspiration Tour: Shenzhen & Hongkong, March 23-27, 2026. Participant: Abigél Anna András","quantity":0.5,"unit_price":8500,"net":4250,"vat":0,"gross":4250,"vat_code":"ZR0"}]},
@@ -148,6 +152,10 @@ end$$;
 insert into public.document_sequences(workspace_id,document_type,fiscal_year,prefix,next_number,padding,include_fiscal_year)
 values('fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9','invoice',2026,'',1205,4,false)
 on conflict(workspace_id,document_type,fiscal_year)do update set prefix='',next_number=greatest(document_sequences.next_number,1205),padding=4,include_fiscal_year=false;
+
+drop table if exists pg_temp.pdf_invoices;
+drop table if exists pg_temp.pdf_customer_map;
+drop table if exists pg_temp.pdf_customers;
 
 commit;
 
