@@ -16,20 +16,24 @@ export function DocumentTemplates() {
   const [msg,setMsg] = useState('');
   const [busy,setBusy] = useState(false);
 
+  const applyTemplate = async (data: Record<string, unknown> | null) => {
+    const value=data?{...empty,...data,payment_instructions:String(data.payment_instructions||''),footer_text:String(data.footer_text||''),payment_instructions_font_size:String(data.payment_instructions_font_size||9)}:empty;
+    setForm(value as typeof empty);
+    if(value.logo_path){const{data:signed}=await supabase.storage.from('finance-documents').createSignedUrl(String(value.logo_path),3600);setLogoUrl(signed?.signedUrl||'')}else setLogoUrl('');
+  };
+
   useEffect(() => {
     if (!workspaceId) return;
     setMsg('');
     void supabase.from('document_templates').select('*').eq('workspace_id',workspaceId)
-      .eq('document_type',kind).eq('is_default',true).maybeSingle().then(async ({data,error}) => {
+      .eq('document_type',kind).eq('is_default',true).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(async ({data,error}) => {
         if (error) return setMsg(error.message);
-        const value=data?{...empty,...data,payment_instructions_font_size:String(data.payment_instructions_font_size||9)}:empty;
-        setForm(value);
-        if(value.logo_path){const{data:signed}=await supabase.storage.from('finance-documents').createSignedUrl(value.logo_path,3600);setLogoUrl(signed?.signedUrl||'')}else setLogoUrl('');
+        await applyTemplate(data);
       });
   },[workspaceId,kind]);
 
   const upload=async(file:File)=>{if(!workspaceId)return;setBusy(true);const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${workspaceId}/document-assets/${kind}-${Date.now()}-${safe}`;const{error}=await supabase.storage.from('finance-documents').upload(path,file,{contentType:file.type,upsert:false});if(error)setMsg(error.message);else{setForm({...form,logo_path:path});const{data}=await supabase.storage.from('finance-documents').createSignedUrl(path,3600);setLogoUrl(data?.signedUrl||'')}setBusy(false)};
-  const save=async(event:FormEvent)=>{event.preventDefault();if(!workspaceId)return;setBusy(true);const payload={workspace_id:workspaceId,document_type:kind,name:`Default ${kind.replace('_',' ')}`,is_default:true,font_family:form.font_family,accent_color:form.accent_color,footer_text:form.footer_text||null,payment_instructions:form.payment_instructions||null,payment_instructions_font_size:Number(form.payment_instructions_font_size),logo_path:form.logo_path||null,updated_at:new Date().toISOString()};const request=form.id?supabase.from('document_templates').update(payload).eq('id',form.id):supabase.from('document_templates').insert(payload);const{error}=await request;setBusy(false);setMsg(error?error.message:'Document layout saved.')};
+  const save=async(event:FormEvent)=>{event.preventDefault();if(!workspaceId)return;setBusy(true);setMsg('Saving…');const payload={workspace_id:workspaceId,document_type:kind,name:`Default ${kind.replace('_',' ')}`,is_default:true,font_family:form.font_family,accent_color:form.accent_color,footer_text:form.footer_text.trim()||null,payment_instructions:form.payment_instructions.trim()||null,payment_instructions_font_size:Number(form.payment_instructions_font_size),logo_path:form.logo_path||null,updated_at:new Date().toISOString()};const result=form.id?await supabase.from('document_templates').update(payload).eq('id',form.id).select('*').single():await supabase.from('document_templates').insert(payload).select('*').single();setBusy(false);if(result.error||!result.data)return setMsg(result.error?.message||'The layout was not saved. Check your workspace access.');await applyTemplate(result.data);setMsg('Document layout saved and verified.')};
 
   return <div className="max-w-6xl"><h1 className="text-3xl font-bold">Invoice layout</h1><p className="text-gray-600 mt-1 mb-6">Design customer-facing documents for {workspace?.legal_name}. Purchase orders and payment terms are entered on each document.</p><div className="grid gap-6 lg:grid-cols-2">
     <form onSubmit={save} className="space-y-4 bg-white border rounded-xl p-4 sm:p-6">
