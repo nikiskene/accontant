@@ -41,6 +41,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
     zip: '',
     phone: '',
     email: '',
+    vat_trn: '',
     default_payment_terms: '',
     open_balance: '0',
   });
@@ -81,6 +82,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         zip: data.zip || '',
         phone: data.phone || '',
         email: data.email || '',
+        vat_trn: data.vat_trn || '',
         default_payment_terms: data.default_payment_terms || '',
         open_balance: data.open_balance?.toString() || '0',
       });
@@ -136,6 +138,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         zip: formData.zip.trim() || null,
         phone: formData.phone.trim() || null,
         email,
+        vat_trn: formData.vat_trn.trim() || null,
         default_payment_terms: formData.default_payment_terms.trim() || null,
         open_balance: openBalance,
       };
@@ -271,6 +274,13 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
               placeholder="john@example.com"
             />
           </div>
+
+          <Input
+            label="Customer UID / VAT ID"
+            value={formData.vat_trn}
+            onChange={(e) => setFormData({ ...formData, vat_trn: e.target.value })}
+            placeholder="For example: ATU12345678"
+          />
 
           <Input
             label="Open Balance"
