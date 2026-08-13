@@ -32,7 +32,20 @@ export function DocumentTemplates() {
       });
   },[workspaceId,kind]);
 
-  const upload=async(file:File)=>{if(!workspaceId)return;setBusy(true);const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${workspaceId}/document-assets/${kind}-${Date.now()}-${safe}`;const{error}=await supabase.storage.from('finance-documents').upload(path,file,{contentType:file.type,upsert:false});if(error)setMsg(error.message);else{setForm({...form,logo_path:path});const{data}=await supabase.storage.from('finance-documents').createSignedUrl(path,3600);setLogoUrl(data?.signedUrl||'')}setBusy(false)};
+  const upload=async(file:File)=>{
+    if(!workspaceId)return;
+    setBusy(true);setMsg('Uploading logo…');
+    const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=`${workspaceId}/document-assets/${kind}-${Date.now()}-${safe}`;
+    const uploaded=await supabase.storage.from('finance-documents').upload(path,file,{contentType:file.type,upsert:false});
+    if(uploaded.error){setBusy(false);setMsg(uploaded.error.message);return}
+    const payload={workspace_id:workspaceId,document_type:kind,name:`Default ${kind.replace('_',' ')}`,is_default:true,font_family:form.font_family,accent_color:form.accent_color,footer_text:form.footer_text.trim()||null,payment_instructions:form.payment_instructions.trim()||null,payment_instructions_font_size:Number(form.payment_instructions_font_size),logo_path:path,updated_at:new Date().toISOString()};
+    const result=form.id?await supabase.from('document_templates').update(payload).eq('id',form.id).select('*').single():await supabase.from('document_templates').insert(payload).select('*').single();
+    setBusy(false);
+    if(result.error||!result.data){setMsg(result.error?.message||'The logo uploaded but could not be linked to this layout.');return}
+    await applyTemplate(result.data);
+    setMsg('Logo uploaded and saved.');
+  };
   const save=async(event:FormEvent)=>{event.preventDefault();if(!workspaceId)return;setBusy(true);setMsg('Saving…');const payload={workspace_id:workspaceId,document_type:kind,name:`Default ${kind.replace('_',' ')}`,is_default:true,font_family:form.font_family,accent_color:form.accent_color,footer_text:form.footer_text.trim()||null,payment_instructions:form.payment_instructions.trim()||null,payment_instructions_font_size:Number(form.payment_instructions_font_size),logo_path:form.logo_path||null,updated_at:new Date().toISOString()};const result=form.id?await supabase.from('document_templates').update(payload).eq('id',form.id).select('*').single():await supabase.from('document_templates').insert(payload).select('*').single();setBusy(false);if(result.error||!result.data)return setMsg(result.error?.message||'The layout was not saved. Check your workspace access.');await applyTemplate(result.data);setMsg('Document layout saved and verified.')};
 
   const kinds:{value:Kind;label:string}[]=[{value:'invoice',label:'Invoice'},{value:'quote',label:'Quote / Cost Estimate'},{value:'credit_note',label:'Credit Note'}];
