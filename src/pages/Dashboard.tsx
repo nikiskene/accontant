@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase';
 import { TrendingUp, TrendingDown, AlertCircle, FileText, Inbox } from 'lucide-react';
 
 interface DashboardStats {
-  ytdDomesticRevenue: number;
-  ytdForeignRevenue: number;
+  ytdInvoicedRevenue: Record<string, number>;
+  ytdCollectedRevenue: Record<string, number>;
   ytdTotalExpenses: number;
   currentMonthVat: { input: number; output: number; netPayable: number };
   unreconciledBankLines: number;
@@ -33,6 +33,17 @@ function normalizeId(v: any): string | null {
   if (typeof v !== 'string') return null;
   const s = v.trim();
   return s.length ? s : null;
+}
+
+function addCurrencyAmount(totals: Record<string, number>, currency: string, amount: unknown) {
+  const code = currency || 'Unknown';
+  totals[code] = (totals[code] || 0) + safeNumber(amount);
+}
+
+function CurrencyTotals({ values }: { values: Record<string, number> }) {
+  const entries = Object.entries(values).filter(([, amount]) => Math.abs(amount) >= 0.005);
+  if (!entries.length) return <p className="text-2xl font-bold text-gray-900 mt-2">0.00</p>;
+  return <div className="mt-2 space-y-1">{entries.sort(([a],[b])=>a.localeCompare(b)).map(([currency,amount])=><p key={currency} className="text-2xl font-bold text-gray-900">{amount.toFixed(2)} {currency}</p>)}</div>;
 }
 
 export function Dashboard() {
@@ -115,28 +126,32 @@ export function Dashboard() {
 
       const periodLabel = ty.label || ty.name || `${fromDate} → ${toDate}`;
 
-      // 3) Load posted lines in tax-year window
-      const { data: posted, error: postedError } = await supabase
-        .from('v_posted_lines_aed')
-        .select('account_id, amount_aed, txn_date')
-        .eq('workspace_id', wsId)
-        .gte('txn_date', fromDate)
-        .lte('txn_date', toDate);
-
-      if (postedError) throw postedError;
+      // 3) Operational sales live in sales_documents; expenses live in the posted ledger.
+      const [postedResult, salesResult] = await Promise.all([
+        supabase.from('v_posted_lines_aed').select('account_id, amount_aed, txn_date')
+          .eq('workspace_id', wsId).gte('txn_date', fromDate).lte('txn_date', toDate),
+        supabase.from('sales_documents').select('currency,subtotal,tax_total,total,amount_paid,issue_date,status')
+          .eq('workspace_id', wsId).eq('document_type', 'invoice').neq('status', 'void')
+          .gte('issue_date', fromDate).lte('issue_date', toDate),
+      ]);
+      if (postedResult.error) throw postedResult.error;
+      if (salesResult.error) throw salesResult.error;
+      const posted = postedResult.data || [];
+      const sales = salesResult.data || [];
 
       // 4) Aggregate KPIs
-      let domesticRevenue = 0;
-      let foreignRevenue = 0;
+      const invoicedRevenue: Record<string, number> = {};
+      const collectedRevenue: Record<string, number> = {};
       let totalExpenses = 0;
 
-      for (const row of posted || []) {
+      for (const document of sales) {
+        addCurrencyAmount(invoicedRevenue, document.currency, document.subtotal);
+        addCurrencyAmount(collectedRevenue, document.currency, document.amount_paid);
+      }
+
+      for (const row of posted) {
         const acct = accountsById.get((row as any).account_id);
         const amount = safeNumber((row as any).amount_aed);
-
-        // Revenue buckets by code (if account metadata is present)
-        if (acct?.code === '4000') domesticRevenue += amount;
-        if (acct?.code === '4010') foreignRevenue += amount;
 
         // Expenses include expense + cogs (if we know type)
         if (acct?.type === 'expense' || acct?.type === 'cogs') totalExpenses += amount;
@@ -148,7 +163,9 @@ export function Dashboard() {
       const today = toISODate(now);
 
       let vatInput = 0;
-      let vatOutput = 0;
+      let vatOutput = sales
+        .filter((document) => document.issue_date >= monthStart && document.issue_date <= today)
+        .reduce((sum, document) => sum + safeNumber(document.tax_total), 0);
       let vatNet = 0;
 
       const tryVatRpc = async (fn: string) => {
@@ -170,14 +187,14 @@ export function Dashboard() {
         }
 
         const totalVat = vatRows.reduce((s, r) => s + safeNumber(r.vat_amount), 0);
-        vatOutput = totalVat > 0 ? totalVat : 0;
+        vatOutput += totalVat > 0 ? totalVat : 0;
         vatInput = totalVat < 0 ? Math.abs(totalVat) : 0;
         vatNet = vatOutput - vatInput;
       } catch {
         vatInput = 0;
-        vatOutput = 0;
         vatNet = 0;
       }
+      vatNet = vatOutput - vatInput;
 
       // 6) Counts
       const [bankResult, draftResult] = await Promise.all([
@@ -197,8 +214,8 @@ export function Dashboard() {
       if (seq !== requestSeq.current) return;
 
       setStats({
-        ytdDomesticRevenue: Math.abs(domesticRevenue),
-        ytdForeignRevenue: Math.abs(foreignRevenue),
+        ytdInvoicedRevenue: invoicedRevenue,
+        ytdCollectedRevenue: collectedRevenue,
         ytdTotalExpenses: Math.abs(totalExpenses),
         currentMonthVat: {
           input: Math.abs(vatInput),
@@ -259,10 +276,8 @@ export function Dashboard() {
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">YTD Domestic Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stats?.ytdDomesticRevenue.toFixed(2)} {ccy}
-              </p>
+              <p className="text-sm font-medium text-gray-600">YTD Invoiced Revenue (net)</p>
+              <CurrencyTotals values={stats?.ytdInvoicedRevenue || {}} />
             </div>
             <TrendingUp className="w-10 h-10 text-blue-500" />
           </div>
@@ -271,10 +286,8 @@ export function Dashboard() {
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">YTD Foreign Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stats?.ytdForeignRevenue.toFixed(2)} {ccy}
-              </p>
+              <p className="text-sm font-medium text-gray-600">YTD Collected (gross)</p>
+              <CurrencyTotals values={stats?.ytdCollectedRevenue || {}} />
             </div>
             <TrendingUp className="w-10 h-10 text-green-500" />
           </div>

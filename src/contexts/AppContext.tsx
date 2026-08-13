@@ -165,7 +165,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Only set a default if nothing is selected yet.
       if (taxYearsData && taxYearsData.length > 0 && !selectedTaxYearId) {
+        const currentYear = String(new Date().getFullYear());
         const defaultYear =
+          taxYearsData.find((ty) => ty.label === currentYear) ||
           taxYearsData.find((ty) => ty.is_default) ||
           taxYearsData[0];
 
