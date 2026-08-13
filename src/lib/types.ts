@@ -71,6 +71,7 @@ export interface Counterparty {
   email?: string | null;
   email_lc?: string | null;
   open_balance?: number | null;
+  default_payment_terms?: string | null;
   vat_trn: string | null;
   default_vat_code_id?: string | null;
   created_at: string;

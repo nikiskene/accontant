@@ -80,6 +80,8 @@ Verified on 12 August 2026:
 36. [`907_verify_statement_upload.sql`](./907_verify_statement_upload.sql) — read-only statement-upload verification.
 37. [`028_add_document_layout_settings.sql`](./028_add_document_layout_settings.sql) — document header/font settings and private logo upload types.
 38. [`908_verify_document_layout.sql`](./908_verify_document_layout.sql) — read-only document-layout verification.
+39. [`029_move_terms_and_header_to_documents.sql`](./029_move_terms_and_header_to_documents.sql) — customer/document payment terms, document headers, and payment-instruction font size.
+40. [`909_verify_document_commercial_fields.sql`](./909_verify_document_commercial_fields.sql) — read-only commercial-field verification.
 
 ## Deliberately deferred
 

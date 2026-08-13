@@ -41,6 +41,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
     zip: '',
     phone: '',
     email: '',
+    default_payment_terms: '',
     open_balance: '0',
   });
 
@@ -80,6 +81,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         zip: data.zip || '',
         phone: data.phone || '',
         email: data.email || '',
+        default_payment_terms: data.default_payment_terms || '',
         open_balance: data.open_balance?.toString() || '0',
       });
     } catch (err: any) {
@@ -134,6 +136,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         zip: formData.zip.trim() || null,
         phone: formData.phone.trim() || null,
         email,
+        default_payment_terms: formData.default_payment_terms.trim() || null,
         open_balance: openBalance,
       };
 
@@ -277,6 +280,18 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
             onChange={(e) => setFormData({ ...formData, open_balance: e.target.value })}
             placeholder="0.00"
           />
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Default payment terms</label>
+            <textarea
+              rows={3}
+              value={formData.default_payment_terms}
+              onChange={(e) => setFormData({ ...formData, default_payment_terms: e.target.value })}
+              placeholder="For example: 50% on acceptance, 50% within 14 days of invoice"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-xs text-gray-500">Used as the starting text for this customer. It remains editable on every quote or invoice.</p>
+          </div>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
