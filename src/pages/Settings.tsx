@@ -56,22 +56,33 @@ export function Settings() {
     setError('');
 
     try {
+      if (!workspaceId) throw new Error('No company selected');
       const workspaceResult = await supabase
         .from('workspaces')
         .update(workspaceForm)
-        .eq('id', workspaceId);
-      if (workspaceResult.error) throw workspaceResult.error;
+        .eq('id', workspaceId)
+        .select('id')
+        .single();
+      if (workspaceResult.error || !workspaceResult.data) throw workspaceResult.error || new Error('Company settings were not saved');
 
       const normalizedSettings = Object.fromEntries(
         Object.entries(settingsForm).map(([key,value]) => [key,value || null])
       );
       const settingsResult = await supabase
         .from('workspace_settings')
-        .update(normalizedSettings)
-        .eq('workspace_id', workspaceId);
-      if (settingsResult.error) throw settingsResult.error;
+        .upsert({ ...normalizedSettings, workspace_id: workspaceId }, { onConflict: 'workspace_id' })
+        .select('workspace_id,default_bank_account_id,default_cost_center_id,default_vat_code_id,default_revenue_account_id,default_expense_account_id')
+        .single();
+      if (settingsResult.error || !settingsResult.data) throw settingsResult.error || new Error('Default accounts were not saved');
 
       await refetchReferenceData();
+      setSettingsForm({
+        default_bank_account_id: settingsResult.data.default_bank_account_id || '',
+        default_cost_center_id: settingsResult.data.default_cost_center_id || '',
+        default_vat_code_id: settingsResult.data.default_vat_code_id || '',
+        default_revenue_account_id: settingsResult.data.default_revenue_account_id || '',
+        default_expense_account_id: settingsResult.data.default_expense_account_id || '',
+      });
       setSuccess(true);
     } catch (caught) {
       console.error('Error saving settings:', caught);
