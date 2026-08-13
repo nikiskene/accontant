@@ -86,6 +86,7 @@ Verified on 12 August 2026:
 42. [`910_verify_reminder_escalation.sql`](./910_verify_reminder_escalation.sql) — read-only reminder-escalation verification.
 43. [`031_preflight_fzco_sales_reset.sql`](./031_preflight_fzco_sales_reset.sql) — read-only counts before removing FZCO sales test data.
 44. [`032_delete_fzco_sales_test_data.sql`](./032_delete_fzco_sales_test_data.sql) — destructive FZCO-only sales reset before controlled QuickBooks migration.
+45. [`033_import_fzco_2026_invoices_from_pdf.sql`](./033_import_fzco_2026_invoices_from_pdf.sql) — authoritative PDF-based customer and invoice import with legacy numbering continuation.
 
 ## Deliberately deferred
 
