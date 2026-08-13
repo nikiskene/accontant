@@ -82,6 +82,8 @@ Verified on 12 August 2026:
 38. [`908_verify_document_layout.sql`](./908_verify_document_layout.sql) — read-only document-layout verification.
 39. [`029_move_terms_and_header_to_documents.sql`](./029_move_terms_and_header_to_documents.sql) — customer/document payment terms, document headers, and payment-instruction font size.
 40. [`909_verify_document_commercial_fields.sql`](./909_verify_document_commercial_fields.sql) — read-only commercial-field verification.
+41. [`030_add_controlled_reminder_escalation.sql`](./030_add_controlled_reminder_escalation.sql) — unique two-step reminders, documented late fees, and collection referrals.
+42. [`910_verify_reminder_escalation.sql`](./910_verify_reminder_escalation.sql) — read-only reminder-escalation verification.
 
 ## Deliberately deferred
 
