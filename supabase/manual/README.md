@@ -89,6 +89,7 @@ Verified on 12 August 2026:
 45. [`033_import_fzco_2026_invoices_from_pdf.sql`](./033_import_fzco_2026_invoices_from_pdf.sql) — authoritative PDF-based customer and invoice import with legacy numbering continuation.
 46. [`034_import_nikolaus_skene_2026_invoices_from_pdf.sql`](./034_import_nikolaus_skene_2026_invoices_from_pdf.sql) — authoritative Austrian PDF import for invoices 10084 and 10086, including EVN AG, 20% VAT, paid status, and numbering continuation.
 47. [`035_activate_2026_dashboard_years.sql`](./035_activate_2026_dashboard_years.sql) — ensures both entities have 2026 fiscal years and makes 2026 the active default dashboard period.
+48. [`036_inspect_legacy_insolvency_source.sql`](./036_inspect_legacy_insolvency_source.sql) — read-only inventory to run against the separate legacy insolvency Supabase before controlled migration.
 
 ## Deliberately deferred
 
