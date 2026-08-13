@@ -84,6 +84,8 @@ Verified on 12 August 2026:
 40. [`909_verify_document_commercial_fields.sql`](./909_verify_document_commercial_fields.sql) — read-only commercial-field verification.
 41. [`030_add_controlled_reminder_escalation.sql`](./030_add_controlled_reminder_escalation.sql) — unique two-step reminders, documented late fees, and collection referrals.
 42. [`910_verify_reminder_escalation.sql`](./910_verify_reminder_escalation.sql) — read-only reminder-escalation verification.
+43. [`031_preflight_fzco_sales_reset.sql`](./031_preflight_fzco_sales_reset.sql) — read-only counts before removing FZCO sales test data.
+44. [`032_delete_fzco_sales_test_data.sql`](./032_delete_fzco_sales_test_data.sql) — destructive FZCO-only sales reset before controlled QuickBooks migration.
 
 ## Deliberately deferred
 
