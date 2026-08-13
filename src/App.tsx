@@ -29,6 +29,7 @@ import { AustrianTaxSetup } from './pages/AustrianTaxSetup';
 import { FixedAssets } from './pages/FixedAssets';
 import { StatementImports } from './pages/StatementImports';
 import { DocumentTemplates } from './pages/DocumentTemplates';
+import { PrivateInsolvency } from './pages/PrivateInsolvency';
 
 function Router() {
   const { user, loading } = useApp();
@@ -117,6 +118,8 @@ function Router() {
         return <Settings />;
       case '/audit-log':
         return <AuditLog />;
+      case '/private-insolvency':
+        return <PrivateInsolvency />;
       default:
         window.history.pushState({}, '', '/companies');
         return <CompanySwitcher />;

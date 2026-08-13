@@ -90,6 +90,8 @@ Verified on 12 August 2026:
 46. [`034_import_nikolaus_skene_2026_invoices_from_pdf.sql`](./034_import_nikolaus_skene_2026_invoices_from_pdf.sql) — authoritative Austrian PDF import for invoices 10084 and 10086, including EVN AG, 20% VAT, paid status, and numbering continuation.
 47. [`035_activate_2026_dashboard_years.sql`](./035_activate_2026_dashboard_years.sql) — ensures both entities have 2026 fiscal years and makes 2026 the active default dashboard period.
 48. [`036_inspect_legacy_insolvency_source.sql`](./036_inspect_legacy_insolvency_source.sql) — read-only inventory to run against the separate legacy insolvency Supabase before controlled migration.
+49. [`037_add_private_insolvency_module.sql`](./037_add_private_insolvency_module.sql) — isolated private case, creditor, schedule, payment and audit schema with owner-only RLS.
+50. [`038_export_legacy_insolvency_data.sql`](./038_export_legacy_insolvency_data.sql) — read-only source-data export with migration control totals.
 
 ## Deliberately deferred
 

@@ -20,6 +20,7 @@ import {
   Home,
   MoreHorizontal,
   ShoppingCart,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from './Button';
@@ -34,7 +35,7 @@ interface NavItem {
   icon: LucideIcon;
   path: string;
   country?: string;
-  section: 'Company' | 'Sales' | 'Costs' | 'Accounting';
+  section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private';
 }
 
 const navItems: NavItem[] = [
@@ -60,6 +61,7 @@ const navItems: NavItem[] = [
   { name: 'Fixed Assets & AfA', icon: ClipboardList, path: '/fixed-assets', country: 'AT', section: 'Accounting' },
   { name: 'Settings', icon: Settings, path: '/settings', section: 'Accounting' },
   { name: 'Audit Log', icon: FileText, path: '/audit-log', section: 'Accounting' },
+  { name: 'Private Insolvency', icon: ShieldCheck, path: '/private-insolvency', section: 'Private' },
 ];
 
 export function Layout({ children }: LayoutProps) {
