@@ -7,5 +7,5 @@ select jsonb_build_object(
  'unverified_cross_border_mappings',(select count(*)from public.austrian_tax_code_mappings where workspace_id='d621017c-e9bd-4334-a07f-5e7b6d31ef6e'and status='unverified'),
  'afa_schedule',to_regclass('public.fixed_asset_depreciation_schedule')is not null,
  'bank_statement_tables',(select count(*)from information_schema.tables where table_schema='public'and table_name in('bank_statement_imports','bank_statement_rows')),
- 'austrian_bank_accounts',(select count(*)from public.bank_accounts where workspace_id='d621017c-e9bd-4334-a07f-5e7b6d31ef6e'and bank_name in('Bank Austria','N26 (credit card / clearing)'))
+ 'austrian_bank_accounts',(select count(*)from public.bank_accounts where workspace_id='d621017c-e9bd-4334-a07f-5e7b6d31ef6e'and name in('Bank Austria','N26 (credit card / clearing)'))
 )verification;
