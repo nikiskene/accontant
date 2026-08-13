@@ -55,7 +55,7 @@ begin
   delete from public.document_sequences where workspace_id=v_workspace;
 
   insert into public.audit_events(workspace_id,entity_type,entity_id,action,created_by,details)
-  values(v_workspace,'sales_data_reset',null,'delete_test_sales_data',auth.uid(),jsonb_build_object(
+  values(v_workspace,'sales_data_reset',v_workspace,'delete_test_sales_data',auth.uid(),jsonb_build_object(
     'sales_documents',v_documents,'sales_document_lines',v_lines,'sales_document_links',v_links,
     'payment_allocations',v_allocations,'customer_payments',v_payments,'payment_reminders',v_reminders,
     'collection_referrals',v_referrals,'email_outbox',v_outbox,'document_audit_events',v_audit,
@@ -73,4 +73,3 @@ select jsonb_build_object(
   'remaining_email_outbox',(select count(*) from public.email_outbox where workspace_id='fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9' and document_id is not null),
   'reset_audit_logged',exists(select 1 from public.audit_events where workspace_id='fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9' and entity_type='sales_data_reset' and action='delete_test_sales_data')
 ) as reset_verification;
-
