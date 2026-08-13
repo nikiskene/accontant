@@ -113,7 +113,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
     }
 
     const openBalance = parseNumberSafe(formData.open_balance);
-    const { email, email_lc } = normalizeEmail(formData.email);
+    const { email } = normalizeEmail(formData.email);
 
     try {
       setSaving(true);
@@ -142,9 +142,11 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
       //
       // customerData.email_lc = email_lc;
 
+      let savedId = customerId;
       if (isNew) {
-        const { error: insertError } = await supabase.from('counterparties').insert(customerData);
+        const { data: inserted, error: insertError } = await supabase.from('counterparties').insert(customerData).select('id').single();
         if (insertError) throw insertError;
+        savedId = inserted.id;
       } else {
         const { error: updateError } = await supabase
           .from('counterparties')
@@ -157,7 +159,9 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        window.history.pushState({}, '', '/customers');
+        const returnTo=sessionStorage.getItem('sales-customer-return');
+        if(returnTo){sessionStorage.removeItem('sales-customer-return');sessionStorage.setItem('sales-new-customer-id',savedId);window.history.pushState({},'',returnTo)}
+        else window.history.pushState({}, '', '/customers');
         window.dispatchEvent(new PopStateEvent('popstate'));
       }, 800);
     } catch (err: any) {

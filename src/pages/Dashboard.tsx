@@ -36,7 +36,7 @@ function normalizeId(v: any): string | null {
 }
 
 export function Dashboard() {
-  const { workspaceId, accounts, taxYearId } = useApp() as any;
+  const { workspaceId, workspace, accounts, taxYearId } = useApp() as any;
 
   // Debug: must be inside the component (after useApp())
   console.log('[Dashboard] workspaceId=', workspaceId, 'taxYearId=', taxYearId);
@@ -66,7 +66,7 @@ export function Dashboard() {
     void loadDashboardStats(ws, ty);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, taxYearId, accountsById]);
+  }, [workspaceId, taxYearId, accountsById, workspace?.base_currency]);
 
   const loadDashboardStats = async (wsId: string, tyId: string | null) => {
     const seq = ++requestSeq.current;
@@ -75,15 +75,8 @@ export function Dashboard() {
     setLoading(true);
 
     try {
-      // 1) Reporting currency
-      const { data: wsSettings, error: wsSettingsError } = await supabase
-        .from('workspace_settings')
-        .select('reporting_currency')
-        .eq('workspace_id', wsId)
-        .single();
-
-      if (wsSettingsError) throw wsSettingsError;
-      const currency = wsSettings?.reporting_currency || 'AED';
+      // 1) Currency belongs to the selected legal entity.
+      const currency = workspace?.base_currency || 'AED';
 
       // 2) Resolve tax year: prefer selected id, else default
       let ty: any = null;

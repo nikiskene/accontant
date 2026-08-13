@@ -14,7 +14,7 @@ import { exportPLPdf } from '../utils/exportPLPdf';
 import { exportBSPdf } from '../utils/exportBSPdf';
 
 export function Reports() {
-  const { workspaceId, taxYearId } = useApp() as any;
+  const { workspaceId, workspace, workspaces, selectWorkspace, taxYearId } = useApp() as any;
 
   const [reportType, setReportType] = useState<ReportType>('profit_and_loss');
   const [fromDate, setFromDate] = useState(startOfYearISO());
@@ -88,11 +88,14 @@ export function Reports() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
-        <p className="text-gray-600 mt-1">Generate financial reports and export data</p>
+        <p className="text-gray-600 mt-1">Generate financial reports and export data for {workspace?.legal_name || 'the selected company'}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Select label="Company" value={workspaceId || ''} onChange={(e) => { selectWorkspace(e.target.value); setReportData([]); }}>
+            {workspaces.map((company: any) => <option key={company.id} value={company.id}>{company.country === 'AT' ? 'EU / Austria' : 'UAE'} — {company.legal_name}</option>)}
+          </Select>
           <Select
             label="Report Type"
             value={reportType}
