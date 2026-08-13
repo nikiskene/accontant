@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
   { name: 'Receivables', icon: Files, path: '/receivables', section: 'Sales' },
   { name: 'Products & Services', icon: Package, path: '/catalog', section: 'Sales' },
   { name: 'Customers', icon: Users, path: '/customers', section: 'Sales' },
-  { name: 'Invoice Layout', icon: FileText, path: '/document-templates', section: 'Sales' },
+  { name: 'Document Layouts', icon: FileText, path: '/document-templates', section: 'Sales' },
   { name: 'New Sale', icon: Plus, path: '/new-sale', section: 'Sales' },
   { name: 'New Expense', icon: Receipt, path: '/new-expense', section: 'Costs' },
   { name: 'Trips', icon: Plane, path: '/trips', section: 'Costs' },
