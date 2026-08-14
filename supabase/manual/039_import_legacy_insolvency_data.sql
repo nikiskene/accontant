@@ -40,5 +40,4 @@ select jsonb_build_object(
  'payments',(select count(*)from public.private_insolvency_payments),'payments_total',(select sum(amount_paid)filter(where not is_voided)from public.private_insolvency_payments),
  'open_balance',(select sum(greatest(balance,0))from public.v_private_insolvency_schedule),
  'isolated_from_company_ledgers',true
-+)as import_verification;
-
+)as import_verification;
