@@ -13,6 +13,8 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
 }[char]!));
+const parseAddresses=(value:unknown)=>[...new Set((Array.isArray(value)?value:String(value||'').split(/[,;]/)).map(item=>String(item).trim().toLowerCase()).filter(Boolean))];
+const validEmail=(value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -34,7 +36,7 @@ Deno.serve(async (request) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) return json({ error: 'Unauthorized' }, 401);
 
-    const { document_id, pdf_base64, file_name, to_address, custom_subject, body_text } = await request.json();
+    const { document_id, pdf_base64, file_name, to_address, cc_addresses, bcc_addresses, custom_subject, body_text } = await request.json();
     if (!document_id || typeof pdf_base64 !== 'string' || !pdf_base64) throw new Error('Document and PDF are required');
     if (pdf_base64.length > 13_500_000) throw new Error('PDF attachment exceeds the 10 MB limit');
 
@@ -52,7 +54,12 @@ Deno.serve(async (request) => {
     const customer = Array.isArray(document.customer) ? document.customer[0] : document.customer;
     const recipient = String(to_address || customer?.email || '').trim().toLowerCase();
     if (!recipient) throw new Error('The customer has no email address');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) throw new Error('Enter a valid recipient email address');
+    if (!validEmail(recipient)) throw new Error('Enter a valid recipient email address');
+    const cc=parseAddresses(cc_addresses).filter(address=>address!==recipient);
+    const bcc=parseAddresses(bcc_addresses).filter(address=>address!==recipient&&!cc.includes(address));
+    if(document.document_type==='invoice'&&!bcc.includes('ns@iacy.com'))bcc.push('ns@iacy.com');
+    if([...cc,...bcc].some(address=>!validEmail(address)))throw new Error('Enter valid CC and BCC email addresses');
+    if(cc.length+bcc.length>25)throw new Error('Use no more than 25 CC and BCC recipients');
     const kind = document.document_type === 'quote' ? 'Cost estimate' : document.document_type === 'credit_note' ? 'Credit note' : 'Invoice';
     const number = document.document_number ?? document.id;
     const subject = String(custom_subject || `${kind} ${number}`).trim();
@@ -68,6 +75,8 @@ Deno.serve(async (request) => {
       document_id: document.id,
       from_address: sender,
       to_address: recipient,
+      cc_addresses: cc,
+      bcc_addresses: bcc,
       subject,
       body_html: bodyHtml,
       status: 'sending',
@@ -90,6 +99,8 @@ Deno.serve(async (request) => {
         subject,
         body: { contentType: 'HTML', content: bodyHtml },
         toRecipients: [{ emailAddress: { address: recipient } }],
+        ccRecipients: cc.map(address=>({emailAddress:{address}})),
+        bccRecipients: bcc.map(address=>({emailAddress:{address}})),
         attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: String(file_name || `${number}.pdf`).replace(/[^a-zA-Z0-9._ -]/g, '_'), contentType: 'application/pdf', contentBytes: pdf_base64 }],
       }, saveToSentItems: true }),
     });
@@ -97,7 +108,7 @@ Deno.serve(async (request) => {
 
     await admin.from('email_outbox').update({ status: 'sent', sent_at: new Date().toISOString(), last_error: null }).eq('id', outboxId);
     await admin.from('sales_documents').update({ sent_at: new Date().toISOString() }).eq('id', document.id);
-    await admin.from('audit_events').insert({ workspace_id: document.workspace_id, entity_type: document.document_type, entity_id: document.id, action: 'emailed', created_by: user.id, details: { outbox_id: outboxId, recipient, subject } });
+    await admin.from('audit_events').insert({ workspace_id: document.workspace_id, entity_type: document.document_type, entity_id: document.id, action: 'emailed', created_by: user.id, details: { outbox_id: outboxId, recipient, cc, bcc, subject } });
     return json({ sent: true, recipient, outbox_id: outboxId });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
