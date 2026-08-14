@@ -93,6 +93,7 @@ Verified on 12 August 2026:
 49. [`037_add_private_insolvency_module.sql`](./037_add_private_insolvency_module.sql) — isolated private case, creditor, schedule, payment and audit schema with owner-only RLS.
 50. [`038_export_legacy_insolvency_data.sql`](./038_export_legacy_insolvency_data.sql) — read-only source-data export with migration control totals.
 51. [`039_import_legacy_insolvency_data.sql`](./039_import_legacy_insolvency_data.sql) — generated, guarded import of the supplied legacy export with exact record and financial-total reconciliation.
+52. [`040_add_controlled_invoice_void.sql`](./040_add_controlled_invoice_void.sql) — audited voiding for unpaid invoices without deleting or rewriting issued documents.
 
 ## Deliberately deferred
 
