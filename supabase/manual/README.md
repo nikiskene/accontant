@@ -92,6 +92,7 @@ Verified on 12 August 2026:
 48. [`036_inspect_legacy_insolvency_source.sql`](./036_inspect_legacy_insolvency_source.sql) — read-only inventory to run against the separate legacy insolvency Supabase before controlled migration.
 49. [`037_add_private_insolvency_module.sql`](./037_add_private_insolvency_module.sql) — isolated private case, creditor, schedule, payment and audit schema with owner-only RLS.
 50. [`038_export_legacy_insolvency_data.sql`](./038_export_legacy_insolvency_data.sql) — read-only source-data export with migration control totals.
+51. [`039_import_legacy_insolvency_data.sql`](./039_import_legacy_insolvency_data.sql) — generated, guarded import of the supplied legacy export with exact record and financial-total reconciliation.
 
 ## Deliberately deferred
 
