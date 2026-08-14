@@ -95,6 +95,7 @@ Verified on 12 August 2026:
 51. [`039_import_legacy_insolvency_data.sql`](./039_import_legacy_insolvency_data.sql) — generated, guarded import of the supplied legacy export with exact record and financial-total reconciliation.
 52. [`040_add_controlled_invoice_void.sql`](./040_add_controlled_invoice_void.sql) — audited voiding for unpaid invoices without deleting or rewriting issued documents.
 53. [`041_add_email_bcc_tracking.sql`](./041_add_email_bcc_tracking.sql) — stores BCC recipients for auditable invoice and quote email delivery.
+54. [`042_add_duplicate_invoice_as_draft.sql`](./042_add_duplicate_invoice_as_draft.sql) — atomically copies an existing invoice and its lines into an unnumbered, editable draft.
 
 ## Deliberately deferred
 
