@@ -15,7 +15,7 @@ export function CustomerPicker({workspaceId,value,onChange}:{workspaceId:string;
     const{data}=await request;setCustomers((data||[])as Counterparty[]);
   },200);return()=>clearTimeout(timer)},[workspaceId,query]);
 
-  useEffect(()=>{if(!value){setQuery('');return}const selected=customers.find(customer=>customer.id===value);if(selected){setQuery(selected.company_name||selected.name||'');return}void supabase.from('counterparties').select('*').eq('workspace_id',workspaceId).eq('id',value).maybeSingle().then(({data})=>{if(data)setQuery(data.company_name||data.name||'')})},[value,customers,workspaceId]);
+  useEffect(()=>{if(!value)return;void supabase.from('counterparties').select('*').eq('workspace_id',workspaceId).eq('id',value).maybeSingle().then(({data})=>{if(data)setQuery(data.company_name||data.name||'')})},[value,workspaceId]);
   const create=()=>{sessionStorage.setItem('sales-customer-return','/new-quote'+window.location.search);window.history.pushState({},'','/customers/new');window.dispatchEvent(new PopStateEvent('popstate'))};
 
   return <div className="relative">

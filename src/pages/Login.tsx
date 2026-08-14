@@ -29,11 +29,13 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Nikolaus Skene Accountant</h1>
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-gray-950">
+      <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/Portrait%20Niki%202026.png" alt="Nikolaus Skene" className="absolute inset-0 h-full w-full object-cover object-center" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
+      <div className="relative flex min-h-screen flex-col justify-between p-5 sm:p-10 lg:p-16">
+        <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-6xl lg:text-7xl">Nikolaus Skene Accountant</h1>
+        <div className="w-full self-end rounded-2xl bg-white/95 p-6 shadow-2xl backdrop-blur sm:max-w-md sm:p-8">
+          <div className="mb-6"><p className="text-xs font-semibold uppercase tracking-[.2em] text-blue-700">Secure access</p><h2 className="mt-1 text-2xl font-bold text-gray-900">Sign in</h2></div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -63,7 +65,7 @@ export function Login() {
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
-        </form>
+        </form></div>
       </div>
     </div>
   );
