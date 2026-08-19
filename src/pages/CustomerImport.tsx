@@ -331,39 +331,15 @@ export function CustomerImport() {
         const withoutEmail = payload.filter((p) => !p.__email_lc);
 
         if (withEmail.length) {
-          const uniqueEmailLc = Array.from(new Set(withEmail.map((p) => p.__email_lc)));
-
-          const { data: existing, error: existErr } = await supabase
-            .from('counterparties')
-            .select('email_lc')
-            .eq('workspace_id', workspaceId)
-            .eq('kind', 'customer')
-            .in('email_lc', uniqueEmailLc);
-
-          if (existErr) throw existErr;
-
-          const existingSet = new Set((existing || []).map((x: any) => x.email_lc));
-
-          // keep last row per email
-          const dedupMap = new Map<string, any>();
-          for (const row of withEmail) dedupMap.set(row.__email_lc, row);
-
-          const expectUpdated = Array.from(dedupMap.keys()).filter((k) => existingSet.has(k)).length;
-          const expectInserted = dedupMap.size - expectUpdated;
-
-          const dedup = Array.from(dedupMap.values()).map((row) => {
+          // Email is a delivery address, not a customer identity. Different legal
+          // customers may legitimately use the same accounts-payable mailbox.
+          const clean = withEmail.map((row) => {
             const { _rowNumber, __email_lc, ...rest } = row;
             return rest;
           });
-
-          const { error: upErr } = await supabase
-            .from('counterparties')
-            .upsert(dedup, { onConflict: 'workspace_id,email_lc' });
-
-          if (upErr) throw upErr;
-
-          updated += expectUpdated;
-          inserted += expectInserted;
+          const { error: insertError } = await supabase.from('counterparties').insert(clean);
+          if (insertError) throw insertError;
+          inserted += clean.length;
         }
 
         // without email: still allowed, but company_name is required (we enforced above)
