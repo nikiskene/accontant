@@ -30,6 +30,7 @@ import { FixedAssets } from './pages/FixedAssets';
 import { StatementImports } from './pages/StatementImports';
 import { DocumentTemplates } from './pages/DocumentTemplates';
 import { PrivateInsolvency } from './pages/PrivateInsolvency';
+import { CorrectInvoice } from './pages/CorrectInvoice';
 
 function Router() {
   const { user, loading } = useApp();
@@ -80,6 +81,8 @@ function Router() {
         return <SalesDocuments />;
       case '/new-quote':
         return <NewQuote />;
+      case '/correct-invoice':
+        return <CorrectInvoice />;
       case '/company-profile':
         return <CompanyProfile />;
       case '/suppliers':

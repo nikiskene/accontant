@@ -107,8 +107,8 @@ Deno.serve(async (request) => {
     if (!sendResponse.ok) throw new Error(`Microsoft Graph rejected the email (${sendResponse.status})`);
 
     await admin.from('email_outbox').update({ status: 'sent', sent_at: new Date().toISOString(), last_error: null }).eq('id', outboxId);
-    await admin.from('sales_documents').update({ sent_at: new Date().toISOString() }).eq('id', document.id);
-    await admin.from('audit_events').insert({ workspace_id: document.workspace_id, entity_type: document.document_type, entity_id: document.id, action: 'emailed', created_by: user.id, details: { outbox_id: outboxId, recipient, cc, bcc, subject } });
+    await admin.from('sales_documents').update({ sent_at: new Date().toISOString(), correction_pending_resend: false }).eq('id', document.id);
+    await admin.from('audit_events').insert({ workspace_id: document.workspace_id, entity_type: document.document_type, entity_id: document.id, action: document.correction_pending_resend ? 'corrected_invoice_emailed' : 'emailed', created_by: user.id, details: { outbox_id: outboxId, recipient, cc, bcc, subject, revision_number: document.revision_number || 0 } });
     return json({ sent: true, recipient, outbox_id: outboxId });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
