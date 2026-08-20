@@ -150,9 +150,26 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
 
       let savedId = customerId;
       if (isNew) {
-        const { data: inserted, error: insertError } = await supabase.from('counterparties').insert(customerData).select('id').single();
-        if (insertError) throw insertError;
-        savedId = inserted.id;
+        // Reuse a hidden vendor/supplier record instead of fragmenting the same
+        // legal counterparty into two records. The database sync then makes the
+        // customer available to every company owned by this account.
+        let existingQuery = supabase.from('counterparties').select('id,kind').eq('workspace_id',workspaceId).ilike('company_name',formData.company_name.trim()).limit(1);
+        let { data: existing, error: existingError } = await existingQuery.maybeSingle();
+        if (existingError) throw existingError;
+        if (!existing && email) {
+          const emailResult = await supabase.from('counterparties').select('id,kind').eq('workspace_id',workspaceId).ilike('email',email).limit(1).maybeSingle();
+          if (emailResult.error) throw emailResult.error;
+          existing = emailResult.data;
+        }
+        if (existing) {
+          const { error: promoteError } = await supabase.from('counterparties').update({...customerData,kind:existing.kind==='vendor'?'both':'customer'}).eq('id',existing.id).eq('workspace_id',workspaceId);
+          if (promoteError) throw promoteError;
+          savedId = existing.id;
+        } else {
+          const { data: inserted, error: insertError } = await supabase.from('counterparties').insert(customerData).select('id').single();
+          if (insertError) throw insertError;
+          savedId = inserted.id;
+        }
       } else {
         const { error: updateError } = await supabase
           .from('counterparties')
