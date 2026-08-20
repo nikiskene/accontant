@@ -35,6 +35,18 @@ where w.id=c.workspace_id and w.owner_user_id=g.owner_user_id and c.kind in('cus
   and lower(trim(coalesce(c.company_name,c.alias,'')))=g.name_key
   and lower(trim(coalesce(c.email,'')))=g.email_key and c.shared_customer_id is null;
 
+-- A company may already contain separate records with the same normalized name
+-- and email. Preserve them as separate identities instead of guessing which
+-- accounting references should be merged.
+with ranked as(
+  select id,row_number()over(
+    partition by workspace_id,shared_customer_id order by created_at,id
+  )position
+  from public.counterparties where shared_customer_id is not null
+)
+update public.counterparties c set shared_customer_id=gen_random_uuid()
+from ranked r where c.id=r.id and r.position>1;
+
 create unique index if not exists counterparties_workspace_shared_customer_uidx
   on public.counterparties(workspace_id,shared_customer_id)where shared_customer_id is not null;
 create index if not exists counterparties_shared_customer_idx
@@ -87,5 +99,6 @@ select jsonb_build_object(
   'shared_customer_column',exists(select 1 from information_schema.columns where table_schema='public'and table_name='counterparties'and column_name='shared_customer_id'),
   'shared_customer_links',(select count(*)from public.counterparties where shared_customer_id is not null),
   'unlinked_customers',(select count(*)from public.counterparties where kind in('customer','both')and shared_customer_id is null),
+  'same_workspace_shared_duplicates',(select count(*)from(select workspace_id,shared_customer_id from public.counterparties where shared_customer_id is not null group by workspace_id,shared_customer_id having count(*)>1)x),
   'sync_trigger',exists(select 1 from pg_trigger where tgname='counterparties_sync_shared_customer'and not tgisinternal)
 )as verification;
