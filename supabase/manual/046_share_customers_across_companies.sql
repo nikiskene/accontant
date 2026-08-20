@@ -1,12 +1,20 @@
 begin;
 
--- Preserve Julian's six existing transactions and expose the same record as a customer.
-update public.counterparties set kind='both'
-where id='53c640bf-c298-454d-9d6d-105a718c22e6'
-  and workspace_id='fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9'
-  and kind='vendor';
-
 alter table public.counterparties add column if not exists shared_customer_id uuid;
+
+-- If an earlier copy of this migration was run, undo its automatic role change
+-- and remove only unused mirror rows it created. Roles are always explicit.
+do $$declare v_shared uuid;begin
+  select shared_customer_id into v_shared from public.counterparties where id='53c640bf-c298-454d-9d6d-105a718c22e6';
+  update public.counterparties set kind='vendor',shared_customer_id=null
+  where id='53c640bf-c298-454d-9d6d-105a718c22e6'and kind='both'
+    and not exists(select 1 from public.sales_documents where customer_id='53c640bf-c298-454d-9d6d-105a718c22e6');
+  if v_shared is not null then
+    delete from public.counterparties c where c.shared_customer_id=v_shared and c.id<>'53c640bf-c298-454d-9d6d-105a718c22e6'
+      and c.kind='customer'and not exists(select 1 from public.sales_documents d where d.customer_id=c.id)
+      and not exists(select 1 from public.transactions t where t.counterparty_id=c.id);
+  end if;
+end$$;
 alter table public.counterparties drop constraint if exists uniq_counterparty_name_per_workspace;
 drop index if exists public.uniq_counterparty_name_per_workspace;
 alter table public.counterparties drop constraint if exists counterparties_workspace_email_uq;
@@ -75,7 +83,7 @@ on public.counterparties for each row execute function public.sync_shared_custom
 commit;
 
 select jsonb_build_object(
-  'julian_visible_as_customer',exists(select 1 from public.counterparties where id='53c640bf-c298-454d-9d6d-105a718c22e6'and kind='both'),
+  'julian_remains_vendor',exists(select 1 from public.counterparties where id='53c640bf-c298-454d-9d6d-105a718c22e6'and kind='vendor'),
   'shared_customer_column',exists(select 1 from information_schema.columns where table_schema='public'and table_name='counterparties'and column_name='shared_customer_id'),
   'shared_customer_links',(select count(*)from public.counterparties where shared_customer_id is not null),
   'unlinked_customers',(select count(*)from public.counterparties where kind in('customer','both')and shared_customer_id is null),

@@ -30,6 +30,8 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const isNew = customerId === 'new';
+  const requestedRole=new URLSearchParams(window.location.search).get('role');
+  const returnPage=new URLSearchParams(window.location.search).get('return');
 
   const [formData, setFormData] = useState({
     alias: '',
@@ -44,6 +46,8 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
     vat_trn: '',
     default_payment_terms: '',
     open_balance: '0',
+    is_customer: requestedRole!=='vendor',
+    is_vendor: requestedRole==='vendor',
   });
 
   useEffect(() => {
@@ -63,7 +67,6 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         .select('*')
         .eq('id', customerId)
         .eq('workspace_id', workspaceId)
-        .eq('kind', 'customer')
         .maybeSingle();
 
       if (error) throw error;
@@ -85,6 +88,8 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         vat_trn: data.vat_trn || '',
         default_payment_terms: data.default_payment_terms || '',
         open_balance: data.open_balance?.toString() || '0',
+        is_customer: data.kind === 'customer' || data.kind === 'both',
+        is_vendor: data.kind === 'vendor' || data.kind === 'both',
       });
     } catch (err: any) {
       console.error('Error loading customer:', err);
@@ -110,6 +115,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
       setError('Company (legal) is required');
       return;
     }
+    if(!formData.is_customer&&!formData.is_vendor){setError('Select Customer, Vendor, or both.');return}
 
     if (formData.email && !validateEmail(formData.email)) {
       setError('Please enter a valid email address');
@@ -128,7 +134,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
       //   If you have a generated column/trigger for email_lc, only send `email`.
       const customerData: any = {
         workspace_id: workspaceId,
-        kind: 'customer' as const,
+        kind: formData.is_customer&&formData.is_vendor?'both':formData.is_vendor?'vendor':'customer',
         alias: formData.alias.trim() || null,
         company_name: formData.company_name.trim(),
         street_address: formData.street_address.trim() || null,
@@ -150,9 +156,8 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
 
       let savedId = customerId;
       if (isNew) {
-        // Reuse a hidden vendor/supplier record instead of fragmenting the same
-        // legal counterparty into two records. The database sync then makes the
-        // customer available to every company owned by this account.
+        // Do not infer an additional role. If the legal entity already exists,
+        // open its editor so the user explicitly chooses Customer/Vendor/Both.
         let existingQuery = supabase.from('counterparties').select('id,kind').eq('workspace_id',workspaceId).ilike('company_name',formData.company_name.trim()).limit(1);
         let { data: existing, error: existingError } = await existingQuery.maybeSingle();
         if (existingError) throw existingError;
@@ -162,9 +167,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
           existing = emailResult.data;
         }
         if (existing) {
-          const { error: promoteError } = await supabase.from('counterparties').update({...customerData,kind:existing.kind==='vendor'?'both':'customer'}).eq('id',existing.id).eq('workspace_id',workspaceId);
-          if (promoteError) throw promoteError;
-          savedId = existing.id;
+          window.history.pushState({},'',`/customers/${existing.id}?return=${returnPage||'customers'}`);window.dispatchEvent(new PopStateEvent('popstate'));return;
         } else {
           const { data: inserted, error: insertError } = await supabase.from('counterparties').insert(customerData).select('id').single();
           if (insertError) throw insertError;
@@ -184,7 +187,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
       setTimeout(() => {
         const returnTo=sessionStorage.getItem('sales-customer-return');
         if(returnTo){sessionStorage.removeItem('sales-customer-return');sessionStorage.setItem('sales-new-customer-id',savedId);window.history.pushState({},'',returnTo)}
-        else window.history.pushState({}, '', '/customers');
+        else window.history.pushState({}, '', returnPage==='suppliers'?'/suppliers':'/customers');
         window.dispatchEvent(new PopStateEvent('popstate'));
       }, 800);
     } catch (err: any) {
@@ -196,7 +199,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
   };
 
   const handleBack = () => {
-    window.history.pushState({}, '', '/customers');
+    window.history.pushState({}, '', returnPage==='suppliers'?'/suppliers':'/customers');
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
@@ -212,12 +215,13 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
           Back to Customers
         </Button>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isNew ? 'New Customer' : 'Edit Customer'}
+          {isNew ? 'New Counterparty' : 'Edit Counterparty'}
         </h1>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
+          <fieldset className="rounded-lg border border-gray-200 p-4"><legend className="px-1 text-sm font-medium text-gray-700">Show this entry under</legend><div className="flex flex-wrap gap-6"><label className="flex items-center gap-2"><input type="checkbox" checked={formData.is_customer} onChange={e=>setFormData({...formData,is_customer:e.target.checked})}/>Customer</label><label className="flex items-center gap-2"><input type="checkbox" checked={formData.is_vendor} onChange={e=>setFormData({...formData,is_vendor:e.target.checked})}/>Vendor</label></div></fieldset>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Alias"
@@ -328,13 +332,13 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
 
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-              Customer saved successfully! Redirecting...
+              Counterparty saved successfully! Redirecting...
             </div>
           )}
 
           <div className="flex gap-3 pt-4">
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Customer'}
+              {saving ? 'Saving...' : 'Save Counterparty'}
             </Button>
             <Button type="button" variant="secondary" onClick={handleBack} disabled={saving}>
               Cancel
