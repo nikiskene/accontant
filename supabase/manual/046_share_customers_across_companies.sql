@@ -22,15 +22,17 @@ drop index if exists public.counterparties_workspace_email_uq;
 
 -- Link matching existing customers owned by the same account. Name plus email is
 -- used only for this one-time backfill; future identity uses the UUID.
-create temporary table shared_customer_groups on commit drop as
-select owner_user_id,lower(trim(coalesce(c.company_name,c.alias,'')))name_key,
-  lower(trim(coalesce(c.email,'')))email_key,gen_random_uuid()shared_id
-from public.counterparties c join public.workspaces w on w.id=c.workspace_id
-where c.kind in('customer','both')
-group by owner_user_id,lower(trim(coalesce(c.company_name,c.alias,''))),lower(trim(coalesce(c.email,'')));
-
+with grouped as(
+  select owner_user_id,name_key,email_key,gen_random_uuid()shared_id from(
+    select distinct w.owner_user_id,
+      lower(trim(coalesce(c.company_name,c.alias,'')))name_key,
+      lower(trim(coalesce(c.email,'')))email_key
+    from public.counterparties c join public.workspaces w on w.id=c.workspace_id
+    where c.kind in('customer','both')
+  )keys
+)
 update public.counterparties c set shared_customer_id=g.shared_id
-from public.workspaces w,shared_customer_groups g
+from public.workspaces w,grouped g
 where w.id=c.workspace_id and w.owner_user_id=g.owner_user_id and c.kind in('customer','both')
   and lower(trim(coalesce(c.company_name,c.alias,'')))=g.name_key
   and lower(trim(coalesce(c.email,'')))=g.email_key and c.shared_customer_id is null;
