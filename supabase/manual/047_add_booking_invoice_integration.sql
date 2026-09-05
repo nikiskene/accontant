@@ -1,6 +1,25 @@
 -- Idempotency ledger for paid bookings imported through the private integration.
 begin;
 
+create table if not exists public.bookingcal_payments (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'pending' check(status in('pending','paid','fulfilled','expired','failed')),
+  stripe_account text not null check(stripe_account in('fzco','eu')),
+  stripe_session_id text unique,
+  stripe_payment_intent_id text,
+  booking_payload jsonb not null,
+  accounting_payload jsonb not null,
+  event_id text,
+  manage_url text,
+  invoice_id uuid,
+  error text,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.bookingcal_payments enable row level security;
+
 create table if not exists public.booking_invoice_imports (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id),
