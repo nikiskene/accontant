@@ -1,8 +1,8 @@
 # Microsoft 365 receipt ingestion setup
 
-The application is deployed with `billing@iacy.com` disabled. Complete this
-setup before enabling it in Accontant. The production flow uses application
-credentials and does not depend on a browser login.
+The production flow uses application credentials and does not depend on a
+browser login. `billing@iacy.com` is enabled for review-first ingestion; AI
+extraction and automatic booking remain off.
 
 ## 1. Add the minimum Microsoft Graph permission
 
@@ -35,21 +35,21 @@ Mail.Read`, constrained to `billing@iacy.com`. The final test output must show
 Microsoft describes Exchange Application RBAC as the supported way to give an
 app resource-scoped access, including the `Application Mail.Read` role.
 
-## 3. Test alias evidence before enabling production ingestion
+## 3. Test alias evidence in production
 
 Forward one harmless test PDF to `eu@iacy.com` and one to `fzco@iacy.com`.
-Keep the mailbox disabled until we run the controlled sync. The sync inspects
-Graph recipients plus the relevant Internet headers (`To`, `Cc`, `Delivered-To`,
+The ten-minute protected GitHub Actions schedule and the **Sync now** button
+both invoke the same ingestion function. The sync inspects Graph recipients
+plus the relevant Internet headers (`To`, `Cc`, `Delivered-To`,
 `X-Original-To`, and the Exchange original-envelope header). A single matching
 alias gives an entity confidence of 1.0; conflicting or absent evidence creates
 a review item without a company allocation.
 
 The first incremental query starts at the configured current time. It will not
 scan historical mailbox contents. After that it stores only the Graph delta
-cursor and processes new pages incrementally. Webhook delivery can later call
-the same ingestion function, without a new document-processing path.
+cursor and processes new pages incrementally.
 
-## 4. Enable only after the controlled test
+## 4. Review the controlled test
 
 In Accontant → **Microsoft 365 receipt ingestion**, first use **Sync now**.
 Review the two test receipts in **Receipt Inbox** and confirm:
@@ -59,9 +59,9 @@ Review the two test receipts in **Receipt Inbox** and confirm:
 - no record booked automatically;
 - unclear recipient evidence is in review.
 
-Only then enable automatic ingestion. Keep AI extraction disabled unless text
-extraction cannot reliably read the documents. Automatic booking remains
-disabled by design until the accounting review policy explicitly enables it.
+Keep AI extraction disabled unless text extraction cannot reliably read the
+documents. Automatic booking remains disabled by design until the accounting
+review policy explicitly enables it.
 
 ## Operational details
 
