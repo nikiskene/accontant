@@ -32,6 +32,9 @@ import { DocumentTemplates } from './pages/DocumentTemplates';
 import { PrivateInsolvency } from './pages/PrivateInsolvency';
 import { CorrectInvoice } from './pages/CorrectInvoice';
 
+import { ReceiptInbox } from './pages/ReceiptInbox';
+import { EmailIngestionSettings } from './pages/EmailIngestionSettings';
+
 function Router() {
   const { user, loading } = useApp();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -71,6 +74,10 @@ function Router() {
     }
 
     switch (currentPath) {
+      case '/receipt-inbox':
+        return <ReceiptInbox />;
+      case '/email-ingestion':
+        return <EmailIngestionSettings />;
       case '/dashboard':
         return <Dashboard />;
       case '/companies':
