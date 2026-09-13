@@ -1,6 +1,6 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 import {extractText} from 'npm:unpdf@1.8.1';
-import {Alias,Header,resolveEntity,attachmentKind,safeFilename,plainText,parseText,criticalComplete,documentInstructions} from './core.ts';
+import {Alias,Header,resolveEntity,attachmentKind,safeFilename,plainText,parseText,criticalComplete,documentInstructions,receiptSignature,bestLearningRule} from './core.ts';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info, x-receipt-job-key'};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json'}});
 const env=(name:string)=>{const v=Deno.env.get(name);if(!v)throw new Error(`${name} is not configured`);return v;};
@@ -44,6 +44,7 @@ async function extractCandidate(id:string,box:Mailbox){
  if(r.status!=='received')return;
  check(await db.from('receipt_candidates').update({status:'extracting',updated_at:new Date().toISOString()}).eq('id',id).eq('status','received'));
  try{
+ const source=check(await db.from('receipt_emails').select('sender,subject,body_text').eq('id',r.email_id).maybeSingle());
  let bytes:Uint8Array|null=null,text='';
  if(r.file_path){const blob=check(await db.storage.from('receipt-originals').download(r.file_path));bytes=new Uint8Array(await blob.arrayBuffer());}
  if(r.mime_type==='text/plain'&&bytes)text=new TextDecoder().decode(bytes);
@@ -56,8 +57,20 @@ async function extractCandidate(id:string,box:Mailbox){
  let duplicate_status='none',duplicate_of=null;
  if(r.workspace_id&&parsed.vendor&&parsed.invoice_number){const duplicates=check(await db.from('receipt_candidates').select('id,status').eq('workspace_id',r.workspace_id).ilike('vendor',parsed.vendor.replace(/[%_]/g,'')).eq('invoice_number',parsed.invoice_number).neq('id',id).limit(1));if(duplicates.length){duplicate_status='possible_duplicate';duplicate_of=duplicates[0].id;reasons.push('Matching supplier invoice number');}}
  if(duplicate_status==='none'&&r.workspace_id&&parsed.vendor&&parsed.document_date&&parsed.gross_amount){const matches=check(await db.from('receipt_candidates').select('id').eq('workspace_id',r.workspace_id).ilike('vendor',parsed.vendor.replace(/[%_]/g,'')).eq('document_date',parsed.document_date).eq('gross_amount',parsed.gross_amount).eq('currency',parsed.currency).neq('id',id).limit(1));if(matches.length){duplicate_status='possible_duplicate';duplicate_of=matches[0].id;reasons.push('Matching vendor, date, amount and currency');}}
+ const signature=receiptSignature(source?.sender,source?.subject,source?.body_text?.slice(0,12000),parsed.vendor,parsed.description);
  let account_id='';if(r.workspace_id&&parsed.vendor){const rule=check(await db.from('receipt_vendor_rules').select('account_id').eq('workspace_id',r.workspace_id).eq('vendor_normalized',parsed.vendor.toLowerCase().trim()).eq('enabled',true).maybeSingle());account_id=rule?.account_id||'';}
- check(await db.from('receipt_candidates').update({...parsed,extraction:parsed,extraction_method:method,confidence:{entity:r.workspace_id?1:0,extraction:criticalComplete(parsed)?.85:.4,category:account_id?1:0},status:'needs_review',duplicate_status,duplicate_of,review_reasons:reasons,booking:{lines:[{account_id,vat_code_id:'',gross:parsed.gross_amount||0,tax:0,tax_rate:0,description:parsed.description,private_percent:0,deductible_percent:100,vat_recovery_percent:0}]},updated_at:new Date().toISOString()}).eq('id',id));
+ let booking={lines:[{account_id,vat_code_id:'',gross:parsed.gross_amount||0,tax:0,tax_rate:0,description:parsed.description,private_percent:0,deductible_percent:100,vat_recovery_percent:0}]};
+ let learned:null|{score:number;rule:{vendor_template:string|null;description_template:string;booking_template:typeof booking}}=null;
+ if(r.workspace_id&&signature){const rules=check(await db.from('receipt_learning_rules').select('source_signature,similarity_threshold,vendor_template,description_template,booking_template').eq('workspace_id',r.workspace_id).eq('enabled',true).order('last_confirmed',{ascending:false}).limit(50));learned=bestLearningRule(signature,rules) as typeof learned;}
+ if(learned){
+   const template=learned.rule.booking_template;
+   booking={...template,lines:(template.lines||[]).map((line,index)=>({...line,gross:index===0&&parsed.gross_amount!==null?parsed.gross_amount:line.gross,description:line.description||learned!.rule.description_template}))};
+   account_id=booking.lines[0]?.account_id||account_id;
+   if(!parsed.vendor)parsed.vendor=learned.rule.vendor_template;
+   if(!parsed.description)parsed.description=learned.rule.description_template;
+   reasons.push(`Prefilled from a confirmed receipt (${Math.round(learned.score*100)}% similar); review before booking`);
+ }
+ check(await db.from('receipt_candidates').update({...parsed,source_signature:signature,extraction:parsed,extraction_method:method,confidence:{entity:r.workspace_id?1:0,extraction:criticalComplete(parsed)?.85:.4,category:account_id?1:0,learned_booking:learned?.score||0},status:'needs_review',duplicate_status,duplicate_of,review_reasons:reasons,booking,updated_at:new Date().toISOString()}).eq('id',id));
  await event(id,'extraction_completed',{method,duplicate_status});
  }catch(e){const message=e instanceof Error?e.message:'Extraction failed';check(await db.from('receipt_candidates').update({status:'failed',failure_reason:message,updated_at:new Date().toISOString()}).eq('id',id));await event(id,'processing_failed',{reason:message});}
 }
