@@ -1,0 +1,22 @@
+name: Receipt ingestion
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Poll the protected receipt mailbox
+        env:
+          RECEIPT_JOB_KEY: ${{ secrets.RECEIPT_INGESTION_JOB_KEY }}
+        run: |
+          curl --fail-with-body --retry 2 --retry-all-errors \
+            --request POST \
+            --header "content-type: application/json" \
+            --header "x-receipt-job-key: ${RECEIPT_JOB_KEY}" \
+            --data '{}' \
+            https://ndktajhxihahgfdcsuij.supabase.co/functions/v1/ingest-receipts
