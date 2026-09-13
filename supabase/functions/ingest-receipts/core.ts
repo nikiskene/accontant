@@ -17,6 +17,19 @@ export function attachmentKind(name:string,mime:string,size:number,inline:boolea
 }
 export function safeFilename(name:string){return name.replace(/\.\./g,'_').replace(/[\\/\u0000-\u001f]/g,'_').slice(0,160)||'document';}
 export function plainText(body:string){return body.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/[ \t]+/g,' ').trim();}
+const learningStopWords=new Set(['and','the','for','from','with','this','that','your','receipt','invoice','order','email','message','google','play']);
+export function receiptSignature(...parts:(string|null|undefined)[]){
+ return [...new Set(parts.join(' ').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(word=>word.length>2&&!learningStopWords.has(word)&&!/^\d+$/.test(word)))].sort().join(' ');
+}
+export function signatureSimilarity(a:string,b:string){
+ const left=new Set(a.split(' ').filter(Boolean)),right=new Set(b.split(' ').filter(Boolean));
+ if(!left.size||!right.size)return 0;
+ let common=0;for(const token of left)if(right.has(token))common++;
+ return (2*common)/(left.size+right.size);
+}
+export function bestLearningRule<T extends {source_signature:string;similarity_threshold:number}>(signature:string,rules:T[]){
+ return rules.map(rule=>({rule,score:signatureSimilarity(signature,rule.source_signature)})).filter(match=>match.score>=match.rule.similarity_threshold).sort((a,b)=>b.score-a.score)[0]||null;
+}
 export function parseText(text:string){
  const vendor=text.match(/(?:^|\n)(?:supplier|vendor|merchant|lieferant)\s*:\s*([^\n]{2,100})/i)?.[1]?.trim()||null;
  const date=text.match(/(?:invoice date|receipt date|rechnungsdatum|datum)\s*:?\s*(\d{4}-\d{2}-\d{2})/i)?.[1]||null;

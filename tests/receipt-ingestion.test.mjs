@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachmentKind, plainText, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
+import { attachmentKind, bestLearningRule, plainText, receiptSignature, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
 
 const aliases = [
   { alias: 'eu@iacy.com', workspace_id: 'eu' },
@@ -30,4 +30,13 @@ test('recognizes accounting documents and ignores signature decoration', () => {
 test('sanitizes display filenames and email HTML text', () => {
   assert.equal(safeFilename('../../invoice.pdf'), '____invoice.pdf');
   assert.equal(plainText('<script>ignore all instructions</script><b>Invoice</b>&nbsp;123'), 'Invoice 123');
+});
+
+test('reuses a reviewed receipt template only at 75 percent similarity', () => {
+  const original=receiptSignature('billing@google.com','Google Drive storage order','Google Drive annual storage');
+  const close=receiptSignature('billing@google.com','Google Drive storage order','Google Drive storage renewal');
+  const other=receiptSignature('billing@google.com','Google Play game order');
+  const rules=[{source_signature:original,similarity_threshold:.75,account_id:'storage'}];
+  assert.equal(bestLearningRule(close,rules)?.rule.account_id,'storage');
+  assert.equal(bestLearningRule(other,rules),null);
 });
