@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 $displayName = 'IACy Accounting Billing'
 $scopeName = 'IACy Billing Mailbox Only'
 $assignmentName = 'IACy Accounting Billing Mail.Send'
+$readAssignmentName = 'IACy Accounting Billing Mail.Read'
 
 Import-Module ExchangeOnlineManagement
 Connect-ExchangeOnline -UserPrincipalName $AdminUser -Device -ShowBanner:$false
@@ -33,6 +34,10 @@ try {
 
   if (-not (Get-ManagementRoleAssignment -Identity $assignmentName -ErrorAction SilentlyContinue)) {
     New-ManagementRoleAssignment -Name $assignmentName -App $ServicePrincipalObjectId -Role 'Application Mail.Send' -CustomResourceScope $scopeName | Out-Null
+  }
+
+  if (-not (Get-ManagementRoleAssignment -Identity $readAssignmentName -ErrorAction SilentlyContinue)) {
+    New-ManagementRoleAssignment -Name $readAssignmentName -App $ServicePrincipalObjectId -Role 'Application Mail.Read' -CustomResourceScope $scopeName | Out-Null
   }
 
   Test-ServicePrincipalAuthorization -Identity $ServicePrincipalObjectId -Resource $SenderMailbox |
