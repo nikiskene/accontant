@@ -6,9 +6,11 @@ const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,
 const env=(name:string)=>{const v=Deno.env.get(name);if(!v)throw new Error(`${name} is not configured`);return v;};
 const db=createClient(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'));
 function check<T>(result:{data:T;error:unknown}):T{if(result.error)throw result.error;return result.data;}
+function errorText(error:unknown){if(error instanceof Error)return error.message;if(error&&typeof error==='object'){const value=error as {message?:unknown;details?:unknown;hint?:unknown};const text=[value.message,value.details,value.hint].filter((part):part is string=>typeof part==='string'&&part.trim().length>0).join(' ');if(text)return text;}return 'Extraction failed';}
 interface GraphMessage{id:string;internetMessageId?:string;subject?:string;receivedDateTime?:string;from?:{emailAddress:{address:string}};toRecipients?:{emailAddress:{address:string}}[];ccRecipients?:{emailAddress:{address:string}}[];internetMessageHeaders?:Header[];body?:{content:string;contentType:string};'@removed'?:unknown}
 interface Attachment{id:string;name:string;contentType:string;size:number;isInline:boolean;'@odata.type':string}
 interface Mailbox{id:string;mailbox:string;enabled:boolean;ai_enabled:boolean;start_at:string;delta_url:string|null}
+interface IngestionSummary{mailbox:string;emails_seen:number;candidates:number;by_status:Record<string,number>;failure_reasons:Record<string,number>;ai_extractions:number}
 const schema={type:'object',additionalProperties:false,required:['vendor','document_date','currency','gross_amount','invoice_number','description'],properties:{vendor:{type:['string','null']},document_date:{type:['string','null']},currency:{type:['string','null']},gross_amount:{type:['number','null']},invoice_number:{type:['string','null']},description:{type:'string'}}};
 async function request(url:string,token:string){
  if(!url.startsWith('https://graph.microsoft.com/v1.0/'))throw new Error('Unexpected Graph URL');
@@ -75,7 +77,7 @@ async function extractCandidate(id:string,box:Mailbox){
  if(supplier_id)reasons.push('Matched existing supplier record');
  check(await db.from('receipt_candidates').update({...parsed,source_signature:signature,supplier_id,extraction:parsed,extraction_method:method,confidence:{entity:r.workspace_id?1:0,extraction:criticalComplete(parsed)?.85:.4,category:account_id?1:0,learned_booking:learned?.score||0,supplier:supplier_id?1:0},status:'needs_review',duplicate_status,duplicate_of,review_reasons:reasons,booking,updated_at:new Date().toISOString()}).eq('id',id));
  await event(id,'extraction_completed',{method,duplicate_status});
- }catch(e){const message=e instanceof Error?e.message:'Extraction failed';check(await db.from('receipt_candidates').update({status:'failed',failure_reason:message,updated_at:new Date().toISOString()}).eq('id',id));await event(id,'processing_failed',{reason:message});}
+ }catch(e){const message=errorText(e);check(await db.from('receipt_candidates').update({status:'failed',failure_reason:message,updated_at:new Date().toISOString()}).eq('id',id));await event(id,'processing_failed',{reason:message});}
 }
 async function discover(box:Mailbox,m:GraphMessage,access:string,aliases:Alias[]){
  const recipients=[...(m.toRecipients||[]),...(m.ccRecipients||[])].map(r=>r.emailAddress.address);
@@ -111,6 +113,14 @@ async function discover(box:Mailbox,m:GraphMessage,access:string,aliases:Alias[]
  if(!documents){const text=plainText(m.body?.content||'');const id=crypto.randomUUID();const source_key='body';const old=check(await db.from('receipt_candidates').select('id').eq('email_id',source.id).eq('source_key',source_key).maybeSingle());if(!old){check(await db.from('receipt_candidates').insert({id,email_id:source.id,source_key,workspace_id:entity.workspace_id,receiving_alias:entity.receiving_alias,entity_evidence:entity,filename:'email-body.txt',mime_type:'text/plain'}));const path=`${id}/original`;check(await db.storage.from('receipt-originals').upload(path,text,{contentType:'text/plain'}));check(await db.from('receipt_candidates').update({file_path:path}).eq('id',id));}}
  check(await db.from('receipt_emails').update({status:'processed',error:null,attempts:source.attempts+1}).eq('id',source.id));
 }
+async function summaryFor(box:Mailbox):Promise<IngestionSummary>{
+ const {count:emailCount,error:emailError}=await db.from('receipt_emails').select('id',{count:'exact',head:true}).eq('mailbox_id',box.id);if(emailError)throw emailError;
+ const candidates=check(await db.from('receipt_candidates').select('id,status,failure_reason,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id)) as {id:string;status:string;failure_reason:string|null}[];
+ const by_status:Record<string,number>={};for(const candidate of candidates)by_status[candidate.status]=(by_status[candidate.status]||0)+1;
+ const failure_reasons:Record<string,number>={};for(const candidate of candidates)if(candidate.status==='failed'&&candidate.failure_reason)failure_reasons[candidate.failure_reason]=(failure_reasons[candidate.failure_reason]||0)+1;
+ let aiCount=0;if(candidates.length){const {count,error}=await db.from('receipt_ai_usage').select('id',{count:'exact',head:true}).in('receipt_id',candidates.map(candidate=>candidate.id));if(error)throw error;aiCount=count||0;}
+ return {mailbox:box.mailbox,emails_seen:emailCount||0,candidates:candidates.length,by_status,failure_reasons,ai_extractions:aiCount};
+}
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors});if(req.method!=='POST')return json({error:'Method not allowed'},405);
  let mailboxId:string|null=null;
@@ -121,6 +131,7 @@ Deno.serve(async req=>{
  if(!isJob){const{data:{user},error}=await auth.auth.getUser();if(error||!user)return json({error:'Unauthorized'},401);if(!body.mailbox_id)return json({error:'Mailbox required'},400);const allowed=check(await auth.rpc('can_review_receipt_mailbox',{p_id:body.mailbox_id}));if(!allowed)return json({error:'Forbidden'},403);}
  const query=db.from('receipt_mailboxes').select('*');const boxes:Mailbox[]=check(await(body.mailbox_id?query.eq('id',body.mailbox_id):query.eq('enabled',true)));
  const access=await token();
+ const summaries:IngestionSummary[]=[];
  for(const box of boxes){mailboxId=box.id;
  const lease=check(await db.rpc('claim_receipt_mailbox',{p_id:box.id}));if(!lease)continue;
  try{
@@ -130,10 +141,11 @@ Deno.serve(async req=>{
  const page=await(await request(url,access)).json();
  for(const item of page.value as GraphMessage[]){if(item['@removed'])continue;const message:GraphMessage=await(await request(`${root}/messages/${encodeURIComponent(item.id)}?$select=id,internetMessageId,subject,receivedDateTime,from,toRecipients,ccRecipients,internetMessageHeaders,body`,access)).json();await discover(box,message,access,aliases);}
  check(await db.from('receipt_mailboxes').update({delta_url:page['@odata.nextLink']||page['@odata.deltaLink'],last_success:new Date().toISOString(),last_error:null}).eq('id',box.id));
- const pending=check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','received').limit(3));
+ const pending=check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','received').limit(25));
  for(const r of pending)await extractCandidate(r.id,box);
  }finally{check(await db.from('receipt_mailboxes').update({lease_until:null}).eq('id',box.id));}
+ summaries.push(await summaryFor(box));
  }
- return json({ok:true});
+ return json({ok:true,mailboxes:summaries});
  }catch(e){const message=e instanceof Error?e.message:'Ingestion failed';if(mailboxId)await db.from('receipt_mailboxes').update({last_error:message,lease_until:null}).eq('id',mailboxId);console.error(JSON.stringify({event:'ingestion_failed',mailbox_id:mailboxId,reason:message}));return json({error:message},500);}
 });
