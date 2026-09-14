@@ -75,7 +75,7 @@ function displayAmount(row: PLRow, amount: number, currency: string) {
 
 export async function exportPLPdf(workspaceId: string, fromDate: string, toDate: string) {
   const [{ data: workspace, error: workspaceError }, { data: settings, error: settingsError }] = await Promise.all([
-    supabase.from('workspaces').select('legal_name, vat_trn, ct_trn, base_currency').eq('id', workspaceId).single(),
+    supabase.from('workspaces').select('legal_name, vat_trn, ct_trn, base_currency, country').eq('id', workspaceId).single(),
     supabase
     .from('workspace_settings')
     .select('license_number')
@@ -99,7 +99,7 @@ export async function exportPLPdf(workspaceId: string, fromDate: string, toDate:
   const license = settings?.license_number ?? '';
   const vatTrn = workspace.vat_trn ?? '';
   const ctTrn = workspace.ct_trn ?? '';
-  const currency = workspace.base_currency;
+  const currency = workspace.country === 'AT' ? 'EUR' : workspace.country === 'AE' ? 'AED' : workspace.base_currency;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();

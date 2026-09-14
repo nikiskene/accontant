@@ -68,8 +68,10 @@ export function Reports() {
   };
 
   const showPdfButton = reportType === 'profit_and_loss' || reportType === 'balance_sheet';
-  const currency = workspace?.base_currency || '';
-  const credentials = [workspace?.vat_trn ? `VAT / Tax No. ${workspace.vat_trn}` : '', workspace?.ct_trn ? `Corporate Tax No. ${workspace.ct_trn}` : ''].filter(Boolean);
+  const activeCompany = workspace || workspaces.find((company: any) => company.id === workspaceId);
+  const currency = activeCompany?.country === 'AT' ? 'EUR' : activeCompany?.country === 'AE' ? 'AED' : activeCompany?.base_currency || '';
+  const credentials = [activeCompany?.vat_trn ? `VAT / Tax No. ${activeCompany.vat_trn}` : '', activeCompany?.ct_trn ? `Corporate Tax No. ${activeCompany.ct_trn}` : ''].filter(Boolean);
+  const displayHeader = (key: string) => /amount|balance|debit|credit/i.test(key) && currency ? `${key.replace(/_/g, ' ')} (${currency})` : key.replace(/_/g, ' ');
 
   const formatValue = (value: any) => {
     if (value === null || value === undefined) return '-';
@@ -90,7 +92,7 @@ export function Reports() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
-        <p className="text-gray-600 mt-1">Generate financial reports and export data for {workspace?.legal_name || 'the selected company'}</p>
+        <p className="text-gray-600 mt-1">Generate financial reports and export data for {activeCompany?.legal_name || 'the selected company'}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -150,7 +152,7 @@ export function Reports() {
                 .split('_')
                 .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                 .join(' ')}
-            </h2><p className="mt-1 text-sm font-medium text-gray-700">{workspace?.legal_name} · {currency}</p>{credentials.length>0&&<p className="text-xs text-gray-500">{credentials.join(' · ')}</p>}</div>
+            </h2><p className="mt-1 text-sm font-medium text-gray-700">{activeCompany?.legal_name || 'Company details unavailable'} · Reporting currency: {currency}</p>{credentials.length>0&&<p className="text-xs text-gray-500">{credentials.join(' · ')}</p>}</div>
 
             <div className="flex gap-2">
               {showPdfButton && (
@@ -159,7 +161,7 @@ export function Reports() {
                 </Button>
               )}
 
-              <Button variant="secondary" onClick={() => exportRowsToCSV(reportType, reportData, { legalName: workspace?.legal_name || 'Company', currency, credentials })}>
+              <Button variant="secondary" onClick={() => exportRowsToCSV(reportType, reportData, { legalName: activeCompany?.legal_name || 'Company', currency, credentials })}>
                 Export CSV
               </Button>
             </div>
@@ -174,7 +176,7 @@ export function Reports() {
                       key={key}
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      {key.replace(/_/g, ' ')}
+                      {displayHeader(key)}
                     </th>
                   ))}
                 </tr>
