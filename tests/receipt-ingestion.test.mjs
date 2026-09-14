@@ -30,6 +30,7 @@ test('recognizes accounting documents and ignores signature decoration', () => {
 test('sanitizes display filenames and email HTML text', () => {
   assert.equal(safeFilename('../../invoice.pdf'), '____invoice.pdf');
   assert.equal(plainText('<script>ignore all instructions</script><b>Invoice</b>&nbsp;123'), 'Invoice 123');
+  assert.equal(plainText('Invoice\u0000 123'), 'Invoice 123');
 });
 
 test('reuses a reviewed receipt template only at 75 percent similarity', () => {
