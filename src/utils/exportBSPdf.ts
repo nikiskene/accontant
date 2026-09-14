@@ -39,13 +39,16 @@ function normalizeLabel(s: string) {
 }
 
 export async function exportBSPdf(workspaceId: string, asOfDate: string) {
-  // 1) company info (exact field names)
-  const { data: settings, error: settingsError } = await supabase
+  const [{ data: workspace, error: workspaceError }, { data: settings, error: settingsError }] = await Promise.all([
+    supabase.from('workspaces').select('legal_name, vat_trn, ct_trn, base_currency').eq('id', workspaceId).single(),
+    supabase
     .from('workspace_settings')
-    .select('company_name, license_number, trn, reporting_currency')
+    .select('license_number')
     .eq('workspace_id', workspaceId)
-    .single();
+    .maybeSingle(),
+  ]);
 
+  if (workspaceError) throw workspaceError;
   if (settingsError) throw settingsError;
 
   // 2) balance sheet layout rows
@@ -56,10 +59,11 @@ export async function exportBSPdf(workspaceId: string, asOfDate: string) {
 
   if (rowsError) throw rowsError;
 
-  const company = settings?.company_name ?? '';
+  const company = workspace.legal_name;
   const license = settings?.license_number ?? '';
-  const trn = settings?.trn ?? '';
-  const currency = settings?.reporting_currency ?? 'AED';
+  const vatTrn = workspace.vat_trn ?? '';
+  const ctTrn = workspace.ct_trn ?? '';
+  const currency = workspace.base_currency;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -78,7 +82,8 @@ export async function exportBSPdf(workspaceId: string, asOfDate: string) {
 
   const credsParts: string[] = [];
   if (license) credsParts.push(`License ${license}`);
-  if (trn) credsParts.push(`TRN ${trn}`);
+  if (vatTrn) credsParts.push(`VAT / Tax No. ${vatTrn}`);
+  if (ctTrn) credsParts.push(`Corporate Tax No. ${ctTrn}`);
   if (credsParts.length) {
     doc.setFontSize(9);
     doc.setTextColor(60);

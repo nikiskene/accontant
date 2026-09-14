@@ -7,7 +7,7 @@ function escapeCsvValue(v: any) {
   return s;
 }
 
-export function exportRowsToCSV(reportType: string, rows: any[]) {
+export function exportRowsToCSV(reportType: string, rows: any[], identity?: { legalName: string; currency: string; credentials?: string[] }) {
   if (!rows || rows.length === 0) return;
 
   const keys = Object.keys(rows[0]);
@@ -16,7 +16,8 @@ export function exportRowsToCSV(reportType: string, rows: any[]) {
     .map((row) => keys.map((k) => escapeCsvValue((row as any)[k])).join(','))
     .join('\n');
 
-  const csv = `${headers}\n${body}`;
+  const metadata = identity ? [`Company,${escapeCsvValue(identity.legalName)}`, `Currency,${escapeCsvValue(identity.currency)}`, ...(identity.credentials?.filter(Boolean).map(value=>`Credential,${escapeCsvValue(value)}`)||[]), ''] : [];
+  const csv = [...metadata, headers, body].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = window.URL.createObjectURL(blob);
 

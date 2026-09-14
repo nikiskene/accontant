@@ -68,6 +68,8 @@ export function Reports() {
   };
 
   const showPdfButton = reportType === 'profit_and_loss' || reportType === 'balance_sheet';
+  const currency = workspace?.base_currency || '';
+  const credentials = [workspace?.vat_trn ? `VAT / Tax No. ${workspace.vat_trn}` : '', workspace?.ct_trn ? `Corporate Tax No. ${workspace.ct_trn}` : ''].filter(Boolean);
 
   const formatValue = (value: any) => {
     if (value === null || value === undefined) return '-';
@@ -143,12 +145,12 @@ export function Reports() {
       {reportData.length > 0 && (
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <div><h2 className="text-xl font-semibold text-gray-900">
               {reportType
                 .split('_')
                 .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                 .join(' ')}
-            </h2>
+            </h2><p className="mt-1 text-sm font-medium text-gray-700">{workspace?.legal_name} · {currency}</p>{credentials.length>0&&<p className="text-xs text-gray-500">{credentials.join(' · ')}</p>}</div>
 
             <div className="flex gap-2">
               {showPdfButton && (
@@ -157,7 +159,7 @@ export function Reports() {
                 </Button>
               )}
 
-              <Button variant="secondary" onClick={() => exportRowsToCSV(reportType, reportData)}>
+              <Button variant="secondary" onClick={() => exportRowsToCSV(reportType, reportData, { legalName: workspace?.legal_name || 'Company', currency, credentials })}>
                 Export CSV
               </Button>
             </div>
