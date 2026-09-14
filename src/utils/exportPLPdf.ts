@@ -74,13 +74,16 @@ function displayAmount(row: PLRow, amount: number, currency: string) {
 }
 
 export async function exportPLPdf(workspaceId: string, fromDate: string, toDate: string) {
-  // 1) company info (exact field names from your table)
-  const { data: settings, error: settingsError } = await supabase
+  const [{ data: workspace, error: workspaceError }, { data: settings, error: settingsError }] = await Promise.all([
+    supabase.from('workspaces').select('legal_name, vat_trn, ct_trn, base_currency').eq('id', workspaceId).single(),
+    supabase
     .from('workspace_settings')
-    .select('company_name, license_number, trn, reporting_currency')
+    .select('license_number')
     .eq('workspace_id', workspaceId)
-    .single();
+    .maybeSingle(),
+  ]);
 
+  if (workspaceError) throw workspaceError;
   if (settingsError) throw settingsError;
 
   // 2) P&L layout rows
@@ -92,10 +95,11 @@ export async function exportPLPdf(workspaceId: string, fromDate: string, toDate:
 
   if (rowsError) throw rowsError;
 
-  const company = settings?.company_name ?? '';
+  const company = workspace.legal_name;
   const license = settings?.license_number ?? '';
-  const trn = settings?.trn ?? '';
-  const currency = settings?.reporting_currency ?? 'AED';
+  const vatTrn = workspace.vat_trn ?? '';
+  const ctTrn = workspace.ct_trn ?? '';
+  const currency = workspace.base_currency;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -114,7 +118,8 @@ export async function exportPLPdf(workspaceId: string, fromDate: string, toDate:
 
   const credsParts: string[] = [];
   if (license) credsParts.push(`License ${license}`);
-  if (trn) credsParts.push(`TRN ${trn}`);
+  if (vatTrn) credsParts.push(`VAT / Tax No. ${vatTrn}`);
+  if (ctTrn) credsParts.push(`Corporate Tax No. ${ctTrn}`);
   if (credsParts.length) doc.text(credsParts.join('  |  '), pageW / 2, 33, { align: 'center' });
 
   doc.setFontSize(10);
