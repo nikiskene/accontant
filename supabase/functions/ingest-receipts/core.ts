@@ -21,6 +21,9 @@ const learningStopWords=new Set(['and','the','for','from','with','this','that','
 export function receiptSignature(...parts:(string|null|undefined)[]){
  return [...new Set(parts.join(' ').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(word=>word.length>2&&!learningStopWords.has(word)&&!/^\d+$/.test(word)))].sort().join(' ');
 }
+export function normalizeSupplierName(value:string|null|undefined){
+ return (value||'').toLowerCase().normalize('NFKD').replace(/\b(incorporated|inc|ltd|limited|llc|gmbh|ag|og|kg|co)\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
+}
 export function signatureSimilarity(a:string,b:string){
  const left=new Set(a.split(' ').filter(Boolean)),right=new Set(b.split(' ').filter(Boolean));
  if(!left.size||!right.size)return 0;
