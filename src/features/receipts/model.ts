@@ -7,7 +7,7 @@ export interface Booking {
  nondeductible_account_id: string; fx_rate: number; tax_reason: string; duplicate_override_reason: string;
 }
 export interface Receipt {
- id: string; workspace_id: string|null; email_id: string|null; receiving_alias: string|null; vendor: string|null;
+ id: string; workspace_id: string|null; supplier_id: string|null; email_id: string|null; receiving_alias: string|null; vendor: string|null;
  invoice_number: string|null; document_date: string|null; due_date: string|null; currency: string|null;
  gross_amount: number|null; description: string; booking: Partial<Booking>; status: string; revision: number;
  filename: string|null; file_path: string|null; duplicate_status: string; review_reasons: string[];

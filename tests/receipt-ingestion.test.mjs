@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachmentKind, bestLearningRule, plainText, receiptSignature, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
+import { attachmentKind, bestLearningRule, normalizeSupplierName, plainText, receiptSignature, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
 
 const aliases = [
   { alias: 'eu@iacy.com', workspace_id: 'eu' },
@@ -39,4 +39,8 @@ test('reuses a reviewed receipt template only at 75 percent similarity', () => {
   const rules=[{source_signature:original,similarity_threshold:.75,account_id:'storage'}];
   assert.equal(bestLearningRule(close,rules)?.rule.account_id,'storage');
   assert.equal(bestLearningRule(other,rules),null);
+});
+
+test('normalizes supplier legal suffixes for an existing supplier match', () => {
+  assert.equal(normalizeSupplierName('Microsoft Ireland Operations Limited'),normalizeSupplierName('Microsoft Ireland Operations Ltd.'));
 });
