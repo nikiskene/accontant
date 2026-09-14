@@ -43,8 +43,9 @@ async function aiExtract(id:string,text:string,bytes:Uint8Array|null,mime:string
 }
 async function extractCandidate(id:string,box:Mailbox){
  const r=check(await db.from('receipt_candidates').select('*').eq('id',id).single());
- if(r.status!=='received')return;
- check(await db.from('receipt_candidates').update({status:'extracting',updated_at:new Date().toISOString()}).eq('id',id).eq('status','received'));
+ const retryingKnownFailure=r.status==='failed'&&['Extraction failed','unsupported Unicode escape sequence \\u0000 cannot be converted to text.'].includes(r.failure_reason||'');
+ if(r.status!=='received'&&!retryingKnownFailure)return;
+ check(await db.from('receipt_candidates').update({status:'extracting',updated_at:new Date().toISOString()}).eq('id',id).eq('status',r.status));
  try{
  const source=check(await db.from('receipt_emails').select('sender,subject,body_text').eq('id',r.email_id).maybeSingle());
  let bytes:Uint8Array|null=null,text='';
@@ -141,7 +142,9 @@ Deno.serve(async req=>{
  const page=await(await request(url,access)).json();
  for(const item of page.value as GraphMessage[]){if(item['@removed'])continue;const message:GraphMessage=await(await request(`${root}/messages/${encodeURIComponent(item.id)}?$select=id,internetMessageId,subject,receivedDateTime,from,toRecipients,ccRecipients,internetMessageHeaders,body`,access)).json();await discover(box,message,access,aliases);}
  check(await db.from('receipt_mailboxes').update({delta_url:page['@odata.nextLink']||page['@odata.deltaLink'],last_success:new Date().toISOString(),last_error:null}).eq('id',box.id));
- const pending=check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','received').limit(25));
+ const received=check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','received').limit(25));
+ const retryable=received.length<25?check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','failed').in('failure_reason',['Extraction failed','unsupported Unicode escape sequence \\u0000 cannot be converted to text.']).limit(25-received.length)):[];
+ const pending=[...received,...retryable];
  for(const r of pending)await extractCandidate(r.id,box);
  }finally{check(await db.from('receipt_mailboxes').update({lease_until:null}).eq('id',box.id));}
  summaries.push(await summaryFor(box));
