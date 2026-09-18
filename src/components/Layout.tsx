@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from './Button';
 import { Select } from './Select';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -66,6 +67,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: LayoutProps) {
+  const { language, setLanguage, t } = useLanguage();
   const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -88,7 +90,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <div>
-                <h1 className="text-xl font-bold">Accountant Niki SKENE</h1>
+                <h1 className="text-xl font-bold">samly<span className="text-blue-400">.</span></h1>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -103,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
                 const Icon = item.icon;
                 const isActive = currentPath === item.path;
                 return (
-                  <div key={item.path}>{(index===0||visible[index-1].section!==item.section)&&<p className="px-4 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{item.section}</p>}<button
+                  <div key={item.path}>{(index===0||visible[index-1].section!==item.section)&&<p className="px-4 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{t.nav[item.section]}</p>}<button
                     onClick={() => handleNavigation(item.path)}
                     className={`flex items-center w-full px-4 py-2.5 rounded-lg transition-colors ${
                       isActive
@@ -112,20 +114,21 @@ export function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
-                    <span className="whitespace-nowrap text-sm font-medium xl:text-base">{item.name}</span>
+                    <span className="whitespace-nowrap text-sm font-medium xl:text-base">{t.nav[item.name]}</span>
                   </button></div>
                 );
               })}
             </nav>
 
             <div className="p-4 border-t border-gray-800">
+              <button onClick={() => setLanguage(language === 'en' ? 'de' : 'en')} className="mb-3 w-full rounded-lg border border-gray-700 px-4 py-2 text-left text-sm font-semibold text-gray-200 hover:bg-gray-800">{language === 'en' ? 'Deutsch' : 'English'}</button>
               <Button
                 variant="ghost"
                 className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
                 onClick={signOut}
               >
                 <LogOut className="w-5 h-5 mr-3" />
-                Sign Out
+                {t.signOut}
               </Button>
             </div>
           </div>
@@ -141,7 +144,7 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <Menu className="w-6 h-6" />
                 </button>
-                <h2 className="ml-3 text-base font-semibold text-gray-900 lg:hidden">Accountant Niki SKENE</h2>
+                <h2 className="ml-3 text-base font-semibold text-gray-900 lg:hidden">samly.</h2>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
@@ -150,7 +153,7 @@ export function Layout({ children }: LayoutProps) {
               </Select>}
               {taxYears.length > 0 && (
                 <div className="hidden items-center gap-2 sm:flex">
-                  <span className="text-sm text-gray-600 hidden lg:inline">Tax Year:</span>
+                  <span className="text-sm text-gray-600 hidden lg:inline">{t.taxYear}:</span>
                   <Select
                     value={selectedTaxYearId || ''}
                     onChange={(e) => setSelectedTaxYearId(e.target.value)}
@@ -173,9 +176,9 @@ export function Layout({ children }: LayoutProps) {
               <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-red-900">No Access to Workspace</h3>
+                  <h3 className="font-semibold text-red-900">{t.noAccess}</h3>
                   <p className="text-sm text-red-800 mt-1">
-                    You don't have permission to access this workspace. Please contact your administrator.
+                    {t.noAccessDetail}
                   </p>
                 </div>
               </div>

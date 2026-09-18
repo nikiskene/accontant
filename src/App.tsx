@@ -34,6 +34,7 @@ import { CorrectInvoice } from './pages/CorrectInvoice';
 
 import { ReceiptInbox } from './pages/ReceiptInbox';
 import { EmailIngestionSettings } from './pages/EmailIngestionSettings';
+import { Home } from './pages/Home';
 
 function Router() {
   const { user, loading } = useApp();
@@ -47,6 +48,10 @@ function Router() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  if (currentPath === '/') {
+    return <Home />;
+  }
 
   if (loading) {
     return (

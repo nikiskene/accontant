@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 
-const empty = { legal_form:'',registration_number:'',tax_identification_number:'',vat_number:'',uid_number:'',corporate_tax_number:'',trade_licence_number:'',licensing_authority:'',tax_office:'',address_line_1:'',address_line_2:'',postal_code:'',city:'',state_region:'',billing_email:'billing@iacy.com',phone:'',website:'',authorized_signatory:'',default_payment_terms_days:'14',legal_footer:'' };
+const empty = { legal_form:'',registration_number:'',tax_identification_number:'',vat_number:'',uid_number:'',corporate_tax_number:'',trade_licence_number:'',licensing_authority:'',tax_office:'',address_line_1:'',address_line_2:'',postal_code:'',city:'',state_region:'',billing_email:'',phone:'',website:'',authorized_signatory:'',default_payment_terms_days:'14',legal_footer:'' };
 const profileKeys = Object.keys(empty);
 
 export function CompanyProfile() {
