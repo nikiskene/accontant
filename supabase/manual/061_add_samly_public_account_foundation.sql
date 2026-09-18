@@ -150,18 +150,17 @@ grant execute on function public.create_samly_account(text,text,text) to authent
 
 commit;
 
--- Verification: returns only the caller's own Samly account and its isolated workspace.
+-- Verification: safe to run from the Supabase SQL editor.
 select jsonb_build_object(
-  'my_samly_account', (
-    select jsonb_build_object('id', a.id, 'display_name', a.display_name, 'plan', a.plan_code, 'status', a.subscription_status)
-    from public.samly_accounts a where a.owner_user_id = auth.uid()
+  'samly_accounts_table', to_regclass('public.samly_accounts') is not null,
+  'samly_account_workspaces_table', to_regclass('public.samly_account_workspaces') is not null,
+  'provisioning_rpc', to_regprocedure('public.create_samly_account(text,text,text)') is not null,
+  'public_workspace_invites_blocked', exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'workspace_members'
+      and policyname = 'admins add workspace members'
+      and with_check like '%samly_account_workspaces%'
   ),
-  'my_samly_workspaces', coalesce((
-    select jsonb_agg(jsonb_build_object('workspace_id', aw.workspace_id, 'legal_name', w.legal_name, 'country', w.country, 'currency', w.base_currency))
-    from public.samly_account_workspaces aw
-    join public.workspaces w on w.id = aw.workspace_id
-    join public.samly_accounts a on a.id = aw.account_id
-    where a.owner_user_id = auth.uid()
-  ), '[]'::jsonb),
+  'created_samly_accounts', (select count(*) from public.samly_accounts),
   'shared_ledger_boundary', 'Samly accounting data is scoped by the newly created workspace_id.'
 ) as samly_public_account_foundation_verification;
