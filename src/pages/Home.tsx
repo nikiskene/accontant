@@ -11,7 +11,7 @@ export function Home() {
     : [['Receipts, ready to review', 'Incoming email and documents arrive in a clear review flow before they are booked.'], ['Invoices under control', 'Create, send and follow up on quotes and invoices from one place.'], ['Reports you can trust', 'Keep figures separated by company and currency, with an audit trail behind every decision.']];
   return <main className="min-h-screen bg-[#fbfaf8] text-slate-900">
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-      <button onClick={() => navigate('/samly')} className="text-xl font-bold tracking-tight">samly<span className="text-blue-600">.</span></button>
+      <button onClick={() => navigate('/samly')} className="flex items-center" aria-label="Samly home"><img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly" className="h-9 w-auto" /></button>
       <div className="flex items-center gap-3">
         <button onClick={() => setLanguage(de ? 'en' : 'de')} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-white">{de ? 'EN' : 'DE'}</button>
         <button onClick={() => navigate('/samly/login')} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">{de ? 'Anmelden' : 'Sign in'}</button>
