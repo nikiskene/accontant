@@ -17,8 +17,11 @@ export function SamlyLogin() {
     event.preventDefault(); setError(''); setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setError(error.message); else {
-      try { await provisionPendingSamlySignup(); navigate('/samly/app'); }
-      catch (provisionError: any) { setError(provisionError.message || 'Your workspace could not be created.'); }
+      try {
+        const provisioned = await provisionPendingSamlySignup();
+        const { data: isAdmin } = await supabase.rpc('is_samly_admin');
+        navigate(isAdmin && !provisioned ? '/samly/feedback' : '/samly/app');
+      } catch (provisionError: any) { setError(provisionError.message || 'Your workspace could not be created.'); }
     }
     setLoading(false);
   };
