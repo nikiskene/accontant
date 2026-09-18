@@ -11,23 +11,22 @@ export function Home() {
     : [['Receipts, ready to review', 'Incoming email and documents arrive in a clear review flow before they are booked.'], ['Invoices under control', 'Create, send and follow up on quotes and invoices from one place.'], ['Reports you can trust', 'Keep figures separated by company and currency, with an audit trail behind every decision.']];
   return <main className="min-h-screen bg-[#fbfaf8] text-slate-900">
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-      <button onClick={() => navigate('/samly')} className="flex items-center" aria-label="Samly home"><img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly" className="h-9 w-auto" /></button>
+      <button onClick={() => navigate('/samly')} className="flex items-center" aria-label="Samly home"><img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly" className="h-[4.5rem] w-auto" /></button>
       <div className="flex items-center gap-3">
         <button onClick={() => setLanguage(de ? 'en' : 'de')} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-white">{de ? 'EN' : 'DE'}</button>
         <button onClick={() => navigate('/samly/login')} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">{de ? 'Anmelden' : 'Sign in'}</button>
       </div>
     </header>
-    <section className="relative isolate min-h-[680px] overflow-hidden border-y border-slate-200 bg-[#faf9f5]">
+    <section className="relative isolate min-h-[680px] overflow-hidden border-y border-slate-700 bg-slate-900">
       <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/Samly%20Hero.png" alt="Samly turns scattered accounting work into a calm, organised flow" className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#faf9f5]/82 via-[#faf9f5]/28 to-transparent" />
+      <div className="absolute inset-0 -z-10 bg-[#40566a]/80 mix-blend-multiply" />
+      <div className="absolute inset-0 -z-10 bg-slate-950/30" />
       <div className="mx-auto flex min-h-[680px] max-w-6xl items-center px-5 py-20 sm:px-8">
-        <div className="max-w-2xl">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-sm font-semibold text-blue-800 shadow-sm"><ShieldCheck className="h-4 w-4" />{de ? 'Buchhaltung, die bei dir bleibt' : 'Accounting that stays yours'}</p>
-          <h1 className="text-5xl font-bold tracking-[-.04em] text-slate-950 drop-shadow-[0_1px_0_rgba(255,255,255,.55)] sm:text-6xl lg:text-7xl">{de ? 'Klar sehen, was dein Unternehmen bewegt.' : 'See your business clearly.'}</h1>
-          <div className="mt-7 max-w-md rounded-2xl bg-white/78 p-5 shadow-[0_10px_35px_rgba(15,23,42,.08)] backdrop-blur-[2px] sm:p-6">
-            <p className="text-lg leading-8 text-slate-700">{de ? 'Samly verwandelt das Chaos aus Belegen, Rechnungen und Bankbewegungen in einen ruhigen, sicheren Arbeitsbereich.' : 'Samly turns the chaos of receipts, invoices and bank movements into one calm, secure workspace.'}</p>
-            <div className="mt-6 flex flex-wrap gap-3"><button onClick={() => navigate('/samly/signup')} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-slate-300 bg-white/90 px-6 py-3 font-semibold hover:border-slate-500">{de ? 'Preise ansehen' : 'View pricing'}</a></div>
-          </div>
+        <div className="max-w-xl text-white">
+          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm"><ShieldCheck className="h-4 w-4" />{de ? 'Dein Konto. Dein Überblick.' : 'Your books. Your overview.'}</p>
+          <h1 className="text-5xl font-bold tracking-[-.04em] drop-shadow-sm sm:text-6xl lg:text-7xl">{de ? 'Mehr Spaß. Weniger Beleg-Ballett.' : 'Have more fun. Let Samly do the paperwork.'}</h1>
+          <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-white/95">{de ? 'Belege sind klein. Steuerregeln eher nicht. Onkel Samly sortiert den Papierkram, damit du wieder die guten Dinge bauen kannst.' : 'Receipts are tiny. Tax rules are not. Let Uncle Samly sort the paperwork while you get back to the good stuff.'}</p>
+          <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate('/samly/signup')} className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 shadow-lg hover:bg-slate-100">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-white/60 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-sm hover:bg-white/20">{de ? 'Preise ansehen' : 'View plans'}</a></div>
         </div>
       </div>
     </section>
