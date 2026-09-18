@@ -19,13 +19,15 @@ export function Home() {
     </header>
     <section className="relative isolate min-h-[680px] overflow-hidden border-y border-slate-200 bg-[#faf9f5]">
       <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/Samly%20Hero.png" alt="Samly turns scattered accounting work into a calm, organised flow" className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#faf9f5] via-[#faf9f5]/80 to-[#faf9f5]/20" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#faf9f5]/82 via-[#faf9f5]/28 to-transparent" />
       <div className="mx-auto flex min-h-[680px] max-w-6xl items-center px-5 py-20 sm:px-8">
-        <div className="max-w-2xl rounded-3xl bg-[#faf9f5]/80 p-6 shadow-[0_12px_50px_rgba(15,23,42,.08)] backdrop-blur-[2px] sm:p-9">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-800"><ShieldCheck className="h-4 w-4" />{de ? 'Buchhaltung, die bei dir bleibt' : 'Accounting that stays yours'}</p>
-          <h1 className="text-5xl font-bold tracking-[-.04em] sm:text-6xl lg:text-7xl">{de ? 'Klar sehen, was dein Unternehmen bewegt.' : 'See your business clearly.'}</h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-slate-700">{de ? 'Samly verwandelt das Chaos aus Belegen, Rechnungen und Bankbewegungen in einen ruhigen, sicheren Arbeitsbereich.' : 'Samly turns the chaos of receipts, invoices and bank movements into one calm, secure workspace.'}</p>
-          <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate('/samly/signup')} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-slate-300 bg-white/90 px-6 py-3 font-semibold hover:border-slate-500">{de ? 'Preise ansehen' : 'View pricing'}</a></div>
+        <div className="max-w-2xl">
+          <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-sm font-semibold text-blue-800 shadow-sm"><ShieldCheck className="h-4 w-4" />{de ? 'Buchhaltung, die bei dir bleibt' : 'Accounting that stays yours'}</p>
+          <h1 className="text-5xl font-bold tracking-[-.04em] text-slate-950 drop-shadow-[0_1px_0_rgba(255,255,255,.55)] sm:text-6xl lg:text-7xl">{de ? 'Klar sehen, was dein Unternehmen bewegt.' : 'See your business clearly.'}</h1>
+          <div className="mt-7 max-w-md rounded-2xl bg-white/78 p-5 shadow-[0_10px_35px_rgba(15,23,42,.08)] backdrop-blur-[2px] sm:p-6">
+            <p className="text-lg leading-8 text-slate-700">{de ? 'Samly verwandelt das Chaos aus Belegen, Rechnungen und Bankbewegungen in einen ruhigen, sicheren Arbeitsbereich.' : 'Samly turns the chaos of receipts, invoices and bank movements into one calm, secure workspace.'}</p>
+            <div className="mt-6 flex flex-wrap gap-3"><button onClick={() => navigate('/samly/signup')} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-slate-300 bg-white/90 px-6 py-3 font-semibold hover:border-slate-500">{de ? 'Preise ansehen' : 'View pricing'}</a></div>
+          </div>
         </div>
       </div>
     </section>
