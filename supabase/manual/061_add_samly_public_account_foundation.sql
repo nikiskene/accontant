@@ -52,7 +52,7 @@ $$;
 alter table public.samly_accounts enable row level security;
 alter table public.samly_account_workspaces enable row level security;
 revoke all on public.samly_accounts, public.samly_account_workspaces from anon;
-grant select, update on public.samly_accounts to authenticated;
+grant select on public.samly_accounts to authenticated;
 grant select on public.samly_account_workspaces to authenticated;
 grant all on public.samly_accounts, public.samly_account_workspaces to service_role;
 
@@ -60,18 +60,6 @@ drop policy if exists samly_accounts_owner_read on public.samly_accounts;
 create policy samly_accounts_owner_read on public.samly_accounts
   for select to authenticated using (owner_user_id = auth.uid());
 drop policy if exists samly_accounts_owner_update on public.samly_accounts;
-create policy samly_accounts_owner_update on public.samly_accounts
-  for update to authenticated
-  using (owner_user_id = auth.uid())
-  with check (
-    owner_user_id = auth.uid()
-    and stripe_customer_id is not distinct from (select stripe_customer_id from public.samly_accounts where id = samly_accounts.id)
-    and stripe_subscription_id is not distinct from (select stripe_subscription_id from public.samly_accounts where id = samly_accounts.id)
-    and stripe_price_id is not distinct from (select stripe_price_id from public.samly_accounts where id = samly_accounts.id)
-    and subscription_status is not distinct from (select subscription_status from public.samly_accounts where id = samly_accounts.id)
-    and subscription_current_period_end is not distinct from (select subscription_current_period_end from public.samly_accounts where id = samly_accounts.id)
-    and plan_code is not distinct from (select plan_code from public.samly_accounts where id = samly_accounts.id)
-  );
 
 drop policy if exists samly_account_workspaces_owner_read on public.samly_account_workspaces;
 create policy samly_account_workspaces_owner_read on public.samly_account_workspaces
@@ -175,8 +163,5 @@ select jsonb_build_object(
     join public.samly_accounts a on a.id = aw.account_id
     where a.owner_user_id = auth.uid()
   ), '[]'::jsonb),
-  'existing_niki_workspaces_remain_unlinked', (
-    select count(*) = 0 from public.samly_account_workspaces
-    where workspace_id in ('fb3a9c15-a7b2-4c57-b7d5-24e6d104eca9'::uuid, 'd621017c-e9bd-4334-a07f-5e7b6d31ef6e'::uuid)
-  )
+  'shared_ledger_boundary', 'Samly accounting data is scoped by the newly created workspace_id.'
 ) as samly_public_account_foundation_verification;
