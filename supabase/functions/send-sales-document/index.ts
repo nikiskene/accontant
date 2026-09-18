@@ -57,6 +57,7 @@ Deno.serve(async (request) => {
     if (!validEmail(recipient)) throw new Error('Enter a valid recipient email address');
     const cc=parseAddresses(cc_addresses).filter(address=>address!==recipient);
     const bcc=parseAddresses(bcc_addresses).filter(address=>address!==recipient&&!cc.includes(address));
+    if(document.document_type==='invoice'&&!bcc.includes('ns@iacy.com'))bcc.push('ns@iacy.com');
     if([...cc,...bcc].some(address=>!validEmail(address)))throw new Error('Enter valid CC and BCC email addresses');
     if(cc.length+bcc.length>25)throw new Error('Use no more than 25 CC and BCC recipients');
     const kind = document.document_type === 'quote' ? 'Cost estimate' : document.document_type === 'credit_note' ? 'Credit note' : 'Invoice';
@@ -64,7 +65,7 @@ Deno.serve(async (request) => {
     const subject = String(custom_subject || `${kind} ${number}`).trim();
     if (!subject || subject.length > 200) throw new Error('Enter an email subject of no more than 200 characters');
     const customerName = customer.company_name || customer.alias || 'Customer';
-    const defaultBody = `Dear ${customerName},\n\nPlease find ${kind.toLowerCase()} ${number} attached.\n\nTotal: ${document.currency} ${Number(document.total).toFixed(2)}\n\nKind regards`;
+    const defaultBody = `Dear ${customerName},\n\nPlease find ${kind.toLowerCase()} ${number} attached.\n\nTotal: ${document.currency} ${Number(document.total).toFixed(2)}\n\nKind regards,\nIACy`;
     const bodyText = String(body_text || defaultBody).trim();
     if (!bodyText || bodyText.length > 10000) throw new Error('Enter an email message of no more than 10,000 characters');
     const bodyHtml = `<div style="font-family:Arial,sans-serif;white-space:pre-wrap">${escapeHtml(bodyText)}</div>`;

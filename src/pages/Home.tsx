@@ -11,10 +11,10 @@ export function Home() {
     : [['Receipts, ready to review', 'Incoming email and documents arrive in a clear review flow before they are booked.'], ['Invoices under control', 'Create, send and follow up on quotes and invoices from one place.'], ['Reports you can trust', 'Keep figures separated by company and currency, with an audit trail behind every decision.']];
   return <main className="min-h-screen bg-[#fbfaf8] text-slate-900">
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-      <button onClick={() => navigate('/')} className="text-xl font-bold tracking-tight">samly<span className="text-blue-600">.</span></button>
+      <button onClick={() => navigate('/samly')} className="text-xl font-bold tracking-tight">samly<span className="text-blue-600">.</span></button>
       <div className="flex items-center gap-3">
         <button onClick={() => setLanguage(de ? 'en' : 'de')} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-white">{de ? 'EN' : 'DE'}</button>
-        <button onClick={() => navigate('/login')} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">{de ? 'Anmelden' : 'Sign in'}</button>
+        <button onClick={() => navigate('/samly/login')} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">{de ? 'Anmelden' : 'Sign in'}</button>
       </div>
     </header>
     <section className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:pt-24">
@@ -22,7 +22,7 @@ export function Home() {
         <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-800"><ShieldCheck className="h-4 w-4" />{de ? 'Buchhaltung, die bei dir bleibt' : 'Accounting that stays yours'}</p>
         <h1 className="max-w-3xl text-5xl font-bold tracking-[-.04em] sm:text-6xl lg:text-7xl">{de ? 'Klar sehen, was dein Unternehmen bewegt.' : 'See your business clearly.'}</h1>
         <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">{de ? 'Samly bringt Belege, Rechnungen, Bankbewegungen und Auswertungen in einen ruhigen, sicheren Arbeitsbereich.' : 'Samly brings receipts, invoices, bank movements and reports into one calm, secure workspace.'}</p>
-        <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate('/login')} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-slate-300 bg-white px-6 py-3 font-semibold hover:border-slate-500">{de ? 'Preise ansehen' : 'View pricing'}</a></div>
+        <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate('/samly/login')} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">{de ? 'Loslegen' : 'Get started'} <ArrowRight className="h-4 w-4" /></button><a href="#pricing" className="rounded-full border border-slate-300 bg-white px-6 py-3 font-semibold hover:border-slate-500">{de ? 'Preise ansehen' : 'View pricing'}</a></div>
       </div>
       <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-2xl sm:p-8">
         <div className="flex items-center justify-between text-sm text-slate-400"><span>{de ? 'Dein Überblick' : 'Your overview'}</span><span className="rounded-full bg-white/10 px-3 py-1">2026</span></div>
