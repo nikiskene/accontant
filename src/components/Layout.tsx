@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import {
   LayoutDashboard,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from './Button';
 import { Select } from './Select';
+import { supabase } from '../lib/supabase';
 
 interface LayoutProps {
   children: ReactNode;
@@ -35,7 +36,7 @@ interface NavItem {
   icon: LucideIcon;
   path: string;
   country?: string;
-  section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private';
+  section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private' | 'Samly admin';
 }
 
 const navItems: NavItem[] = [
@@ -68,6 +69,8 @@ const navItems: NavItem[] = [
 export function Layout({ children }: LayoutProps) {
   const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [samlyAdmin, setSamlyAdmin] = useState(false);
+  useEffect(() => { void supabase.rpc('is_samly_admin').then(({ data }) => setSamlyAdmin(!!data)); }, []);
 
   const currentPath = window.location.pathname;
 
@@ -99,7 +102,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto p-4">
-              {navItems.filter(item => !item.country || item.country === workspace?.country).map((item, index, visible) => {
+              {[...navItems, ...(samlyAdmin ? [{ name: 'Samly customers', icon: Users, path: '/samly-admin', section: 'Samly admin' as const }, { name: 'Feature requests', icon: ClipboardList, path: '/samly/feedback', section: 'Samly admin' as const }] : [])].filter(item => !item.country || item.country === workspace?.country).map((item, index, visible) => {
                 const Icon = item.icon;
                 const isActive = currentPath === item.path;
                 return (
