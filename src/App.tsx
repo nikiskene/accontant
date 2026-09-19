@@ -34,6 +34,7 @@ import { CorrectInvoice } from './pages/CorrectInvoice';
 
 import { ReceiptInbox } from './pages/ReceiptInbox';
 import { EmailIngestionSettings } from './pages/EmailIngestionSettings';
+import { SamlyApp } from './pages/SamlyApp';
 
 function Router() {
   const { user, loading } = useApp();
@@ -47,6 +48,8 @@ function Router() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  if (currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
     return (

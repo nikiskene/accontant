@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachmentKind, bestLearningRule, grossTotalFromText, normalizeSupplierName, plainText, receiptSignature, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
+import { attachmentKind, bestLearningRule, grossTotalFromText, normalizeSupplierName, parseUaeVatQr, plainText, receiptSignature, resolveEntity, safeFilename } from '../supabase/functions/ingest-receipts/core.ts';
 
 const aliases = [
   { alias: 'eu@iacy.com', workspace_id: 'eu' },
@@ -49,4 +49,15 @@ test('uses a VAT-inclusive invoice total instead of Apple net subtotal', () => {
 
 test('normalizes supplier legal suffixes for an existing supplier match', () => {
   assert.equal(normalizeSupplierName('Microsoft Ireland Operations Limited'),normalizeSupplierName('Microsoft Ireland Operations Ltd.'));
+});
+
+
+test('parses UAE VAT QR TLV evidence without treating it as a booking instruction', () => {
+  const fields=['Seller LLC','123456789012345','2026-09-19T10:00:00Z','269.01','12.81'];
+  const bytes=[]; fields.forEach((value,index)=>{const data=Buffer.from(value);bytes.push(index+1,data.length,...data);});
+  const result=parseUaeVatQr(Buffer.from(bytes).toString('base64'));
+  assert.equal(result?.seller_name,'Seller LLC');
+  assert.equal(result?.tax_registration_number,'123456789012345');
+  assert.equal(result?.invoice_total,'269.01');
+  assert.equal(result?.vat_total,'12.81');
 });

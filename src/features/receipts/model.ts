@@ -11,7 +11,7 @@ export interface Receipt {
  invoice_number: string|null; document_date: string|null; due_date: string|null; currency: string|null;
  gross_amount: number|null; description: string; booking: Partial<Booking>; status: string; revision: number;
  filename: string|null; file_path: string|null; duplicate_status: string; review_reasons: string[];
- failure_reason: string|null; confidence: Record<string,number>; transaction_id: string|null;
+ failure_reason: string|null; confidence: Record<string,number>; transaction_id: string|null; extraction?: Record<string,unknown>;
 }
 export const emptyLine = (): Allocation => ({account_id:'',vat_code_id:'',description:'',gross:0,tax:0,tax_rate:0,private_percent:0,deductible_percent:100,vat_recovery_percent:0});
 export function bookingFor(r: Receipt): Booking {
