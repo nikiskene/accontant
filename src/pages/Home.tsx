@@ -14,10 +14,14 @@ export function Home() {
     setCheckoutMessage('');
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate(`/samly/signup?plan=${plan}`); return; }
+    const { data: isAdmin } = await supabase.rpc('is_samly_admin');
+    if (isAdmin) { window.location.assign('/companies'); return; }
     setCheckoutPlan(plan);
     const { data, error } = await supabase.functions.invoke('create-samly-checkout', { body: { plan } });
     setCheckoutPlan(null);
-    if (error || data?.error) { setCheckoutMessage(data?.error || error?.message || 'Checkout could not be started.'); return; }
+    let detail = data?.error || '';
+    if (!detail && error) { try { detail = (await (error as any).context?.json())?.error || ''; } catch { /* Use the safe fallback below. */ } }
+    if (error || data?.error) { setCheckoutMessage(detail || 'Checkout could not be started. Please create your Samly workspace first, then try again.'); return; }
     window.location.assign(data.url);
   };
   const features = de
