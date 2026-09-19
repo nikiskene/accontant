@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-const cors={'Access-Control-Allow-Origin':'https://samly.cc','Access-Control-Allow-Headers':'authorization, apikey, content-type'};
+const cors={'Access-Control-Allow-Origin':'https://samly.cc','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const env=(name:string)=>{const value=Deno.env.get(name);if(!value)throw new Error(`${name} is not configured`);return value;};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json'}});
 const prices={monthly:()=>env('SAMLY_STRIPE_MONTHLY_PRICE_ID'),annual:()=>env('SAMLY_STRIPE_ANNUAL_PRICE_ID')};
