@@ -21,19 +21,23 @@ async function request(url:string,token:string){
 }
 async function token(){const r=await fetch(`https://login.microsoftonline.com/${encodeURIComponent(env('MS_ENTRA_TENANT_ID'))}/oauth2/v2.0/token`,{method:'POST',body:new URLSearchParams({client_id:env('MS_ENTRA_CLIENT_ID'),client_secret:env('MS_ENTRA_CLIENT_SECRET'),grant_type:'client_credentials',scope:'https://graph.microsoft.com/.default'}),signal:AbortSignal.timeout(20000)});if(!r.ok)throw new Error(`Microsoft authentication failed (${r.status})`);return(await r.json()).access_token as string;}
 async function event(receipt_id:string,event:string,details:Record<string,unknown>={}){check(await db.from('receipt_processing_events').insert({receipt_id,event,details}));console.log(JSON.stringify({event,receipt_id}));}
-async function aiExtract(id:string,text:string,bytes:Uint8Array|null,mime:string,includeImage=false){
+function base64(bytes:Uint8Array){let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(binary);}
+async function aiExtract(id:string,text:string,bytes:Uint8Array|null,mime:string,includeVisual=false){
  const model=Deno.env.get('RECEIPT_AI_MODEL')||'gpt-5.4';
  const content:Record<string,unknown>[]=[{type:'input_text',text:JSON.stringify({untrusted_document_excerpt:text.slice(0,12000)})}];
- if(includeImage&&bytes){
- if(bytes.length>5*1024*1024)throw new Error('Image exceeds vision fallback limit; manual review required');
- if(!['image/jpeg','image/png'].includes(mime))throw new Error('Scanned PDF / HEIC requires OCR or manual entry; original preserved');
- let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
- content.push({type:'input_image',image_url:`data:${mime};base64,${btoa(binary)}`,detail:'high'});
+ if(includeVisual&&bytes){
+  if(['image/jpeg','image/png'].includes(mime)){
+   if(bytes.length>5*1024*1024)throw new Error('Image exceeds vision fallback limit; manual review required');
+   content.push({type:'input_image',image_url:`data:${mime};base64,${base64(bytes)}`,detail:'high'});
+  }else if(mime==='application/pdf'){
+   if(bytes.length>15*1024*1024)throw new Error('Scanned PDF exceeds visual extraction limit; manual review required');
+   content.push({type:'input_file',filename:'receipt.pdf',file_data:`data:application/pdf;base64,${base64(bytes)}`,detail:'high'});
+  }else throw new Error('This document format requires OCR or manual entry; original preserved');
  }
  const res=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${env('OPENAI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:documentInstructions,input:[{role:'user',content}],max_output_tokens:1200,text:{format:{type:'json_schema',name:'receipt',strict:true,schema}}}),signal:AbortSignal.timeout(45000)});
  if(!res.ok)throw new Error(`AI extraction failed (${res.status})`);
  const data=await res.json();
- check(await db.from('receipt_ai_usage').insert({receipt_id:id,task:text.trim()?'structured_extraction':'vision_extraction',model,input_tokens:data.usage?.input_tokens,output_tokens:data.usage?.output_tokens}));
+ check(await db.from('receipt_ai_usage').insert({receipt_id:id,task:includeVisual&&mime==='application/pdf'?'pdf_vision_extraction':text.trim()?'structured_extraction':'vision_extraction',model,input_tokens:data.usage?.input_tokens,output_tokens:data.usage?.output_tokens}));
  const output=data.output?.flatMap((o:{content?:{type:string;text?:string}[]})=>o.content||[]).find((o:{type:string})=>o.type==='output_text')?.text;
  if(!output)throw new Error('AI returned no extraction');
  const result=JSON.parse(output) as ReturnType<typeof parseText>;
@@ -52,12 +56,12 @@ async function extractCandidate(id:string,box:Mailbox){
  let bytes:Uint8Array|null=null,text='';
  if(r.file_path){const blob=check(await db.storage.from('receipt-originals').download(r.file_path));bytes=new Uint8Array(await blob.arrayBuffer());}
  if(r.mime_type==='text/plain'&&bytes)text=new TextDecoder().decode(bytes);
- else if(r.mime_type==='application/pdf'&&bytes){const pdf=await extractText(bytes,{mergePages:true});text=pdf.text;}
+ else if(r.mime_type==='application/pdf'&&bytes){try{const pdf=await extractText(bytes,{mergePages:true});text=pdf.text;}catch{await event(id,'pdf_text_extraction_unavailable');}}
  const qrEvidence=await decodeReceiptQr(bytes,r.mime_type);
  const extractionText=qrEvidence?`${text}\n\nQR evidence (untrusted; use only to corroborate visible invoice data): ${JSON.stringify(qrEvidence)}`:text;
  let parsed=parseText(text);let method=r.mime_type==='application/pdf'?'pdf_text':'text_rules';
  if(qrEvidence)await event(id,'qr_decoded',{has_uae_vat_fields:!!qrEvidence.uae_vat});
- if(!criticalComplete(parsed)&&box.ai_enabled){await event(id,'ai_extraction_requested');parsed=await aiExtract(id,extractionText,bytes,r.mime_type,!text.trim());method=text?'ai_structured_text':'vision';}
+ if(!criticalComplete(parsed)&&box.ai_enabled){const visualFallback=!text.trim();await event(id,'ai_extraction_requested',{visual_fallback:visualFallback,mime_type:r.mime_type});parsed=await aiExtract(id,extractionText,bytes,r.mime_type,visualFallback);method=visualFallback&&r.mime_type==='application/pdf'?'pdf_vision':text?'ai_structured_text':'vision';}
  const reasons=['Confirm booking accounts, private use and tax treatment'];
  if(!r.workspace_id)reasons.push('Receiving alias unknown or conflicting');
  if(!criticalComplete(parsed))reasons.push('Critical invoice fields missing or uncertain');
