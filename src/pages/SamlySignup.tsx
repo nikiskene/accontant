@@ -8,7 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 type Form = { companyName: string; country: 'AT' | 'AE'; email: string; password: string };
 const storageKey = 'samly-pending-signup';
 function navigate(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }
-function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://nikiskeneaccountant.netlify.app/companies'); else navigate('/companies'); }
+function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://samly.cc/companies'); else navigate('/companies'); }
 
 async function provision(companyName: string, country: 'AT' | 'AE', language: 'en' | 'de') {
   const { error } = await supabase.rpc('create_samly_account', { p_company_name: companyName.trim(), p_country: country, p_language_code: language });

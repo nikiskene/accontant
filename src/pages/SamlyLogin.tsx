@@ -6,7 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { provisionPendingSamlySignup } from './SamlySignup';
 
 function navigate(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }
-function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://nikiskeneaccountant.netlify.app/companies'); else navigate('/companies'); }
+function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://samly.cc/companies'); else navigate('/companies'); }
 
 export function SamlyLogin() {
   const { language, setLanguage, t } = useLanguage();

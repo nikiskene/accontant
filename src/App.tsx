@@ -50,7 +50,8 @@ function Router() {
   }, []);
 
   const samlyDomain = /(^|\.)samly\.cc$/i.test(window.location.hostname);
-  if (samlyDomain || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
+  const accountantPath = ['/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/receipt-inbox','/email-ingestion'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
+  if ((samlyDomain && !accountantPath) || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
     return (
