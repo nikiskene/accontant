@@ -1,11 +1,25 @@
+import { useState } from 'react';
 import { ArrowRight, FileCheck2, Globe2, ReceiptText, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../lib/supabase';
 
 function navigate(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }
 
 export function Home() {
   const { language, setLanguage } = useLanguage();
   const de = language === 'de';
+  const [checkoutMessage, setCheckoutMessage] = useState('');
+  const [checkoutPlan, setCheckoutPlan] = useState<'monthly'|'annual'|null>(null);
+  const startCheckout = async (plan: 'monthly'|'annual') => {
+    setCheckoutMessage('');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { navigate(`/samly/signup?plan=${plan}`); return; }
+    setCheckoutPlan(plan);
+    const { data, error } = await supabase.functions.invoke('create-samly-checkout', { body: { plan } });
+    setCheckoutPlan(null);
+    if (error || data?.error) { setCheckoutMessage(data?.error || error?.message || 'Checkout could not be started.'); return; }
+    window.location.assign(data.url);
+  };
   const features = de
     ? [['Belege, sofort bereit', 'E-Mails und Belege landen in einer klaren Prüfung, bevor sie gebucht werden.'], ['Rechnungen im Griff', 'Erstelle, versende und verfolge Angebote und Rechnungen aus einem Ort.'], ['Saubere Auswertungen', 'Deine Zahlen bleiben nach Unternehmen und Währung getrennt und nachvollziehbar.']]
     : [['Receipts, ready to review', 'Incoming email and documents arrive in a clear review flow before they are booked.'], ['Invoices under control', 'Create, send and follow up on quotes and invoices from one place.'], ['Reports you can trust', 'Keep figures separated by company and currency, with an audit trail behind every decision.']];
@@ -31,7 +45,7 @@ export function Home() {
       </div>
     </section>
     <section className="border-y border-slate-200 bg-white"><div className="mx-auto max-w-6xl px-5 py-20 sm:px-8"><p className="text-sm font-semibold uppercase tracking-[.18em] text-blue-700">{de ? 'So arbeitet Samly' : 'How Samly works'}</p><h2 className="mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">{de ? 'Weniger Verwaltungsaufwand. Mehr Sicherheit bei jeder Zahl.' : 'Less admin. More confidence in every number.'}</h2><div className="mt-10 grid gap-5 md:grid-cols-3">{features.map(([title, text], index) => <article key={title} className="rounded-2xl border border-slate-200 p-6"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 font-bold text-blue-700">0{index + 1}</div><h3 className="mt-5 text-lg font-bold">{title}</h3><p className="mt-2 leading-7 text-slate-600">{text}</p></article>)}</div></div></section>
-    <section id="pricing" className="mx-auto max-w-6xl px-5 py-20 sm:px-8"><div className="rounded-[2rem] bg-blue-600 px-7 py-10 text-white sm:px-12"><Globe2 className="h-7 w-7"/><h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">{de ? 'Eine klare Lösung für dein Unternehmen.' : 'One clear plan for your business.'}</h2><div className="mt-7 flex flex-wrap gap-3 text-blue-950"><div className="rounded-2xl bg-white px-5 py-4"><span className="text-3xl font-bold">€10</span><span className="ml-2 text-sm font-medium">{de ? '/ Monat' : '/ month'}</span></div><div className="rounded-2xl bg-blue-500 px-5 py-4 text-white"><span className="text-3xl font-bold">€100</span><span className="ml-2 text-sm font-medium">{de ? '/ Jahr' : '/ year'}</span></div></div><p className="mt-6 max-w-2xl text-blue-100">{de ? 'Ein Arbeitsbereich für die Buchhaltung deines Unternehmens. Sichere Zahlungsabwicklung folgt in Kürze.' : 'One workspace for your company’s accounting. Secure checkout is coming soon.'}</p></div></section>
+    <section id="pricing" className="mx-auto max-w-6xl px-5 py-20 sm:px-8"><div className="rounded-[2rem] bg-blue-600 px-7 py-10 text-white sm:px-12"><Globe2 className="h-7 w-7"/><h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">{de ? 'Eine klare Lösung für dein Unternehmen.' : 'One clear plan for your business.'}</h2><div className="mt-7 flex flex-wrap gap-3 text-blue-950"><button onClick={()=>void startCheckout('monthly')} disabled={!!checkoutPlan} className="rounded-2xl bg-white px-5 py-4 text-left hover:bg-blue-50 disabled:opacity-60"><span className="text-3xl font-bold">€10</span><span className="ml-2 text-sm font-medium">{de ? '/ Monat' : '/ month'}</span><span className="mt-2 block text-sm font-semibold text-blue-700">{checkoutPlan==='monthly'?'…':de?'Monatlich starten':'Start monthly'}</span></button><button onClick={()=>void startCheckout('annual')} disabled={!!checkoutPlan} className="rounded-2xl bg-blue-500 px-5 py-4 text-left text-white hover:bg-blue-400 disabled:opacity-60"><span className="text-3xl font-bold">€100</span><span className="ml-2 text-sm font-medium">{de ? '/ Jahr' : '/ year'}</span><span className="mt-2 block text-sm font-semibold text-white">{checkoutPlan==='annual'?'…':de?'Jährlich starten':'Start annual'}</span></button></div>{checkoutMessage&&<p className="mt-5 rounded-xl bg-white/15 p-3 text-sm text-white">{checkoutMessage}</p>}<p className="mt-6 max-w-2xl text-blue-100">{de ? 'Ein Arbeitsbereich für die Buchhaltung deines Unternehmens. Sichere Zahlung via Stripe.' : 'One workspace for your company’s accounting. Secure payment via Stripe.'}</p></div></section>
     <footer className="border-t border-slate-200 px-5 py-8 text-center text-sm text-slate-500">© {new Date().getFullYear()} Samly · <button onClick={() => navigate('/samly/feedback')} className="font-medium text-slate-700 hover:underline">{de ? 'Feature-Wunsch' : 'Feature request'}</button> · <button onClick={() => navigate('/samly/legal')} className="font-medium text-slate-700 hover:underline">{de ? 'Rechtlicher Hinweis' : 'Legal notice'}</button></footer>
   </main>;
 }
