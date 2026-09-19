@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 type Form = { companyName: string; country: 'AT' | 'AE'; email: string; password: string };
 const storageKey = 'samly-pending-signup';
 function navigate(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }
+function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://nikiskeneaccountant.netlify.app/companies'); else navigate('/companies'); }
 
 async function provision(companyName: string, country: 'AT' | 'AE', language: 'en' | 'de') {
   const { error } = await supabase.rpc('create_samly_account', { p_company_name: companyName.trim(), p_country: country, p_language_code: language });
@@ -23,7 +24,7 @@ export function SamlySignup() {
   const [message, setMessage] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [existingUser, setExistingUser] = useState(false);
-  useEffect(() => { void (async () => { const { data } = await supabase.auth.getUser(); setExistingUser(!!data.user); if (data.user) { const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) navigate('/companies'); } })(); }, []);
+  useEffect(() => { void (async () => { const { data } = await supabase.auth.getUser(); setExistingUser(!!data.user); if (data.user) { const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) openAdminDashboard(); } })(); }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -32,7 +33,7 @@ export function SamlySignup() {
     const { data: current } = await supabase.auth.getUser();
     if (current.user) {
       const { data: isAdmin } = await supabase.rpc('is_samly_admin');
-      if (isAdmin) { navigate('/companies'); setLoading(false); return; }
+      if (isAdmin) { openAdminDashboard(); setLoading(false); return; }
       try { await provision(form.companyName, form.country, language); navigate('/samly/app'); }
       catch (error: any) { setMessage(error.message || (de ? 'Konto konnte nicht erstellt werden.' : 'Your account could not be created.')); }
       setLoading(false); return;

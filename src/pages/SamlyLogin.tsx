@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { provisionPendingSamlySignup } from './SamlySignup';
 
 function navigate(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }
+function openAdminDashboard() { if (/(^|\.)samly\.cc$/i.test(window.location.hostname)) window.location.assign('https://nikiskeneaccountant.netlify.app/companies'); else navigate('/companies'); }
 
 export function SamlyLogin() {
   const { language, setLanguage, t } = useLanguage();
@@ -13,7 +14,7 @@ export function SamlyLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { void (async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) navigate('/companies'); })(); }, []);
+  useEffect(() => { void (async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) openAdminDashboard(); })(); }, []);
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault(); setError(''); setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -21,7 +22,7 @@ export function SamlyLogin() {
       try {
         const provisioned = await provisionPendingSamlySignup();
         const { data: isAdmin } = await supabase.rpc('is_samly_admin');
-        navigate(isAdmin ? '/companies' : provisioned ? '/samly/app' : '/samly/app');
+        if (isAdmin) openAdminDashboard(); else navigate(provisioned ? '/samly/app' : '/samly/app');
       } catch (provisionError: any) { setError(provisionError.message || 'Your workspace could not be created.'); }
     }
     setLoading(false);

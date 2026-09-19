@@ -49,7 +49,8 @@ function Router() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  if (currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
+  const samlyDomain = /(^|\.)samly\.cc$/i.test(window.location.hostname);
+  if (samlyDomain || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
     return (
