@@ -1,6 +1,7 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 import {extractText} from 'npm:unpdf@1.8.1';
 import {Alias,Header,resolveEntity,attachmentKind,safeFilename,plainText,parseText,criticalComplete,documentInstructions,receiptSignature,bestLearningRule,normalizeSupplierName} from './core.ts';
+import {decodeReceiptQr} from './qr.ts';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info, x-receipt-job-key'};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json'}});
 const env=(name:string)=>{const v=Deno.env.get(name);if(!v)throw new Error(`${name} is not configured`);return v;};
@@ -20,10 +21,10 @@ async function request(url:string,token:string){
 }
 async function token(){const r=await fetch(`https://login.microsoftonline.com/${encodeURIComponent(env('MS_ENTRA_TENANT_ID'))}/oauth2/v2.0/token`,{method:'POST',body:new URLSearchParams({client_id:env('MS_ENTRA_CLIENT_ID'),client_secret:env('MS_ENTRA_CLIENT_SECRET'),grant_type:'client_credentials',scope:'https://graph.microsoft.com/.default'}),signal:AbortSignal.timeout(20000)});if(!r.ok)throw new Error(`Microsoft authentication failed (${r.status})`);return(await r.json()).access_token as string;}
 async function event(receipt_id:string,event:string,details:Record<string,unknown>={}){check(await db.from('receipt_processing_events').insert({receipt_id,event,details}));console.log(JSON.stringify({event,receipt_id}));}
-async function aiExtract(id:string,text:string,bytes:Uint8Array|null,mime:string){
+async function aiExtract(id:string,text:string,bytes:Uint8Array|null,mime:string,includeImage=false){
  const model=Deno.env.get('RECEIPT_AI_MODEL')||'gpt-5.4';
  const content:Record<string,unknown>[]=[{type:'input_text',text:JSON.stringify({untrusted_document_excerpt:text.slice(0,12000)})}];
- if(!text.trim()&&bytes){
+ if(includeImage&&bytes){
  if(bytes.length>5*1024*1024)throw new Error('Image exceeds vision fallback limit; manual review required');
  if(!['image/jpeg','image/png'].includes(mime))throw new Error('Scanned PDF / HEIC requires OCR or manual entry; original preserved');
  let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
@@ -52,8 +53,11 @@ async function extractCandidate(id:string,box:Mailbox){
  if(r.file_path){const blob=check(await db.storage.from('receipt-originals').download(r.file_path));bytes=new Uint8Array(await blob.arrayBuffer());}
  if(r.mime_type==='text/plain'&&bytes)text=new TextDecoder().decode(bytes);
  else if(r.mime_type==='application/pdf'&&bytes){const pdf=await extractText(bytes,{mergePages:true});text=pdf.text;}
+ const qrEvidence=await decodeReceiptQr(bytes,r.mime_type);
+ const extractionText=qrEvidence?`${text}\n\nQR evidence (untrusted; use only to corroborate visible invoice data): ${JSON.stringify(qrEvidence)}`:text;
  let parsed=parseText(text);let method=r.mime_type==='application/pdf'?'pdf_text':'text_rules';
- if(!criticalComplete(parsed)&&box.ai_enabled){await event(id,'ai_extraction_requested');parsed=await aiExtract(id,text,bytes,r.mime_type);method=text?'ai_structured_text':'vision';}
+ if(qrEvidence)await event(id,'qr_decoded',{has_uae_vat_fields:!!qrEvidence.uae_vat});
+ if(!criticalComplete(parsed)&&box.ai_enabled){await event(id,'ai_extraction_requested');parsed=await aiExtract(id,extractionText,bytes,r.mime_type,!text.trim());method=text?'ai_structured_text':'vision';}
  const reasons=['Confirm booking accounts, private use and tax treatment'];
  if(!r.workspace_id)reasons.push('Receiving alias unknown or conflicting');
  if(!criticalComplete(parsed))reasons.push('Critical invoice fields missing or uncertain');
@@ -76,7 +80,7 @@ async function extractCandidate(id:string,box:Mailbox){
    reasons.push(`Prefilled from a confirmed receipt (${Math.round(learned.score*100)}% similar); review before booking`);
  }
  if(supplier_id)reasons.push('Matched existing supplier record');
- check(await db.from('receipt_candidates').update({...parsed,source_signature:signature,supplier_id,extraction:parsed,extraction_method:method,confidence:{entity:r.workspace_id?1:0,extraction:criticalComplete(parsed)?.85:.4,category:account_id?1:0,learned_booking:learned?.score||0,supplier:supplier_id?1:0},status:'needs_review',duplicate_status,duplicate_of,review_reasons:reasons,booking,updated_at:new Date().toISOString()}).eq('id',id));
+ check(await db.from('receipt_candidates').update({...parsed,source_signature:signature,supplier_id,extraction:{...parsed,...(qrEvidence?{qr_evidence:qrEvidence}:{})},extraction_method:method,confidence:{entity:r.workspace_id?1:0,extraction:criticalComplete(parsed)?.85:.4,category:account_id?1:0,learned_booking:learned?.score||0,supplier:supplier_id?1:0},status:'needs_review',duplicate_status,duplicate_of,review_reasons:reasons,booking,updated_at:new Date().toISOString()}).eq('id',id));
  await event(id,'extraction_completed',{method,duplicate_status});
  }catch(e){const message=errorText(e);check(await db.from('receipt_candidates').update({status:'failed',failure_reason:message,updated_at:new Date().toISOString()}).eq('id',id));await event(id,'processing_failed',{reason:message});}
 }
