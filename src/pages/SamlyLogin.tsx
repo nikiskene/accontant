@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -13,6 +13,7 @@ export function SamlyLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => { void (async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) navigate('/companies'); })(); }, []);
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault(); setError(''); setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -20,7 +21,7 @@ export function SamlyLogin() {
       try {
         const provisioned = await provisionPendingSamlySignup();
         const { data: isAdmin } = await supabase.rpc('is_samly_admin');
-        navigate(isAdmin && !provisioned ? '/samly/feedback' : '/samly/app');
+        navigate(isAdmin ? '/companies' : provisioned ? '/samly/app' : '/samly/app');
       } catch (provisionError: any) { setError(provisionError.message || 'Your workspace could not be created.'); }
     }
     setLoading(false);

@@ -23,7 +23,7 @@ export function SamlySignup() {
   const [message, setMessage] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [existingUser, setExistingUser] = useState(false);
-  useEffect(() => { void supabase.auth.getUser().then(({ data }) => setExistingUser(!!data.user)); }, []);
+  useEffect(() => { void (async () => { const { data } = await supabase.auth.getUser(); setExistingUser(!!data.user); if (data.user) { const { data: isAdmin } = await supabase.rpc('is_samly_admin'); if (isAdmin) navigate('/companies'); } })(); }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -31,6 +31,8 @@ export function SamlySignup() {
     setLoading(true); setMessage('');
     const { data: current } = await supabase.auth.getUser();
     if (current.user) {
+      const { data: isAdmin } = await supabase.rpc('is_samly_admin');
+      if (isAdmin) { navigate('/companies'); setLoading(false); return; }
       try { await provision(form.companyName, form.country, language); navigate('/samly/app'); }
       catch (error: any) { setMessage(error.message || (de ? 'Konto konnte nicht erstellt werden.' : 'Your account could not be created.')); }
       setLoading(false); return;
