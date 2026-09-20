@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
   { name: 'Fixed Assets & AfA', icon: ClipboardList, path: '/fixed-assets', country: 'AT', section: 'Accounting' },
   { name: 'Settings', icon: Settings, path: '/settings', section: 'Accounting' },
   { name: 'Audit Log', icon: FileText, path: '/audit-log', section: 'Accounting' },
-  { name: 'Private Insolvency', icon: ShieldCheck, path: '/private-insolvency', section: 'Private' },
+  { name: 'Downpayment tracker', icon: ShieldCheck, path: '/private-insolvency', section: 'Private' },
   { name: 'Downpayment tracker', icon: WalletCards, path: '/downpayment-tracker', section: 'Samly' },
 ];
 
