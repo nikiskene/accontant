@@ -288,7 +288,7 @@ export function Transactions() {
       >
         {selectedTxn && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm font-medium text-gray-600">Date</p>
                 <p className="text-base text-gray-900">

@@ -2,11 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Phone-first interaction safeguards. Keep controls comfortably tappable and stop iOS
+   from zooming into individual fields because their text is too small. */
 @media (max-width: 640px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden; }
+  main { min-width: 0; }
   main h1 { font-size: 1.75rem !important; line-height: 2.1rem !important; }
   main h2 { line-height: 1.6rem; }
-  main button, main input, main select { min-height: 44px; }
-  main table { min-width: 680px; }
+  button, input:not([type='checkbox']):not([type='radio']), select, textarea { min-height: 44px; font-size: 16px; }
+  button, a { touch-action: manipulation; }
+  textarea { min-height: 88px; }
+  main table { display: block; width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   main table th, main table td { white-space: nowrap; }
-  main .overflow-hidden:has(> table) { overflow-x: auto; }
+  main .overflow-x-auto, main .overflow-auto { -webkit-overflow-scrolling: touch; }
 }

@@ -336,7 +336,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
             </div>
           )}
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-wrap gap-3 pt-4">
             <Button type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save Counterparty'}
             </Button>

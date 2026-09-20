@@ -50,7 +50,7 @@ export function Catalog() {
   const close = () => { setOpen(false); setEditingId(null); setForm({ item_type:'service',name:'',sku:'',unit:'each',unit_price:'0',currency:workspace?.base_currency||'EUR',revenue_account_id:'',vat_code_id:'' }); };
 
   return <div>
-    <div className="flex justify-between items-start mb-6"><div><h1 className="text-3xl font-bold">Products & services</h1><p className="text-gray-600 mt-1">Reusable sales items for this company.</p></div>
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-3xl font-bold">Products & services</h1><p className="text-gray-600 mt-1">Reusable sales items for this company.</p></div>
       <Button onClick={() => { setEditingId(null); setOpen(true); }}><Plus className="w-4 h-4 mr-2" />Add item</Button></div>
     {error && <div className="bg-amber-50 text-amber-900 p-3 rounded-lg mb-4">{error}</div>}
     <div className="bg-white rounded-xl border overflow-hidden"><table className="w-full"><thead className="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr><th className="p-4">Item</th><th>Type</th><th>Unit</th><th>Price</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
@@ -59,11 +59,11 @@ export function Catalog() {
     </tbody></table></div>
     <Modal isOpen={open} onClose={close} title={editingId?'Edit product or service':'Add product or service'}><form onSubmit={save} className="space-y-4">
       <Select label="Type" value={form.item_type} onChange={e => setForm({...form, item_type:e.target.value})}><option value="service">Service</option><option value="product">Product</option></Select>
-      <Input required label="Name" value={form.name} onChange={e => setForm({...form, name:e.target.value})}/><div className="grid grid-cols-2 gap-3"><Input label="SKU" value={form.sku} onChange={e => setForm({...form, sku:e.target.value})}/><Input label="Unit" value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}/></div>
-      <div className="grid grid-cols-2 gap-3"><Input required type="number" step="0.01" label="Unit price" value={form.unit_price} onChange={e => setForm({...form, unit_price:e.target.value})}/><Select label="Currency" value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}>{['EUR','USD','AED','GBP','CHF'].map(currency=><option key={currency}>{currency}</option>)}</Select></div>
+      <Input required label="Name" value={form.name} onChange={e => setForm({...form, name:e.target.value})}/><div className="grid gap-3 sm:grid-cols-2"><Input label="SKU" value={form.sku} onChange={e => setForm({...form, sku:e.target.value})}/><Input label="Unit" value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}/></div>
+      <div className="grid gap-3 sm:grid-cols-2"><Input required type="number" step="0.01" label="Unit price" value={form.unit_price} onChange={e => setForm({...form, unit_price:e.target.value})}/><Select label="Currency" value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}>{['EUR','USD','AED','GBP','CHF'].map(currency=><option key={currency}>{currency}</option>)}</Select></div>
       <Select label="Revenue account" value={form.revenue_account_id} onChange={e => setForm({...form, revenue_account_id:e.target.value})}><option value="">Select later</option>{accounts.filter(a=>a.type==='income').map(a=><option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</Select>
       <Select label="VAT code" value={form.vat_code_id} onChange={e => setForm({...form, vat_code_id:e.target.value})}><option value="">Select later</option>{vatCodes.filter(v=>v.applies_to!=='purchases').map(v=><option key={v.id} value={v.id}>{v.code} · {v.name}</option>)}</Select>
-      <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit">{editingId?'Update item':'Save item'}</Button></div>
+      <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit">{editingId?'Update item':'Save item'}</Button></div>
     </form></Modal>
   </div>;
 }

@@ -200,7 +200,7 @@ export function NewSale() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select
                 value={formData.counterpartyId}
                 onChange={(e) => setFormData({ ...formData, counterpartyId: e.target.value })}
@@ -291,7 +291,7 @@ export function NewSale() {
             </div>
           )}
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-wrap gap-3 pt-4">
             <Button type="submit" disabled={loading}>
               {loading ? 'Creating...' : 'Create Sale'}
             </Button>
@@ -328,7 +328,7 @@ export function NewSale() {
             onChange={(e) => setNewCounterpartyName(e.target.value)}
             placeholder="Company Name"
           />
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button onClick={handleCreateCounterparty}>Create</Button>
             <Button variant="secondary" onClick={() => setShowNewCounterparty(false)}>
               Cancel

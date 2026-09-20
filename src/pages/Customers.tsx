@@ -203,12 +203,12 @@ export function Customers() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
           <p className="text-gray-600 mt-1">Manage your customer database</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
             Import
@@ -221,7 +221,7 @@ export function Customers() {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3 border-b border-gray-200 p-4">
           <div className="flex-1">
             <Input
               placeholder="Search by alias, company (legal), or email..."
@@ -325,7 +325,7 @@ export function Customers() {
               </tbody>
             </table>
 
-            <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 p-4">
               <div className="text-sm text-gray-600">
                 Showing {displayRows.length} customer(s)
               </div>
@@ -373,7 +373,7 @@ export function Customers() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button variant="danger" onClick={handleDelete} disabled={deleteBusy}>
               {deleteBusy ? 'Deleting...' : 'Confirm delete'}
             </Button>
