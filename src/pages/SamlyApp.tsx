@@ -5,6 +5,7 @@ import { SamlySignup } from './SamlySignup';
 import { SamlyLegal } from './SamlyLegal';
 import { SamlyFeedback } from './SamlyFeedback';
 import { SamlyBilling } from './SamlyBilling';
+import { SamlyForgotPassword, SamlyResetPassword } from './SamlyPasswordReset';
 
 function SamlyRoutes() {
   const { language } = useLanguage();
@@ -13,6 +14,8 @@ function SamlyRoutes() {
   if (path === '/samly/feedback') return <SamlyFeedback />;
   if (path === '/samly/signup') return <SamlySignup />;
   if (path === '/samly/login') return <SamlyLogin />;
+  if (path === '/samly/forgot-password') return <SamlyForgotPassword />;
+  if (path === '/samly/reset-password') return <SamlyResetPassword />;
   if (path === '/samly/app') return <SamlyBilling />;
   return <Home />;
 }
