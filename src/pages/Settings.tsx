@@ -10,6 +10,9 @@ export function Settings() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [receiptLocal, setReceiptLocal] = useState('');
+  const [receiptAddress, setReceiptAddress] = useState<string | null>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
 
   const [workspaceForm, setWorkspaceForm] = useState({
     legal_name: workspace?.legal_name || '',
@@ -48,6 +51,10 @@ export function Settings() {
       });
     }
   }, [workspaceSettings]);
+
+  useEffect(() => { void (async () => { const { data } = await supabase.from('receipt_mailboxes').select('mailbox,provider').eq('provider','postmark_inbound').maybeSingle(); if (data?.mailbox) { setReceiptAddress(data.mailbox); setReceiptLocal(data.mailbox.split('@')[0] || ''); } })(); }, []);
+
+  const saveReceiptAddress = async (e: FormEvent) => { e.preventDefault(); setReceiptBusy(true); setError(''); const { data, error: receiptError } = await supabase.rpc('set_samly_receipt_address', { p_local_part: receiptLocal }); setReceiptBusy(false); if (receiptError) { setError(receiptError.message); return; } setReceiptAddress(data as string); };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -126,6 +133,8 @@ export function Settings() {
             />
           </div>
         </div>
+
+        {receiptAddress && <form onSubmit={saveReceiptAddress} className="bg-white rounded-lg shadow p-6"><h2 className="text-xl font-semibold text-gray-900 mb-2">Your Samly receipt address</h2><p className="mb-4 text-sm text-gray-600">Choose a readable address for forwarding bills and receipts. Earlier addresses remain active, so no receipt is lost.</p><div className="flex max-w-xl items-end gap-2"><Input label="Address" value={receiptLocal} onChange={e=>setReceiptLocal(e.target.value.toLowerCase())} required /><span className="mb-2 whitespace-nowrap text-sm text-gray-600">@inbound.samly.cc</span><Button type="submit" disabled={receiptBusy}>{receiptBusy ? 'Saving...' : 'Save'}</Button></div><p className="mt-3 text-sm font-medium text-blue-800">Current: {receiptAddress}</p></form>}
 
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Default Accounts</h2>
