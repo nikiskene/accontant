@@ -30,6 +30,7 @@ import { FixedAssets } from './pages/FixedAssets';
 import { StatementImports } from './pages/StatementImports';
 import { DocumentTemplates } from './pages/DocumentTemplates';
 import { PrivateInsolvency } from './pages/PrivateInsolvency';
+import { DownpaymentTracker } from './pages/DownpaymentTracker';
 import { CorrectInvoice } from './pages/CorrectInvoice';
 
 import { ReceiptInbox } from './pages/ReceiptInbox';
@@ -51,7 +52,7 @@ function Router() {
   }, []);
 
   const samlyDomain = /(^|\.)samly\.cc$/i.test(window.location.hostname);
-  const accountantPath = ['/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/receipt-inbox','/email-ingestion','/samly-admin'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
+  const accountantPath = ['/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/downpayment-tracker','/receipt-inbox','/email-ingestion','/samly-admin'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
   if ((samlyDomain && !accountantPath) || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
@@ -138,6 +139,8 @@ function Router() {
         return <AuditLog />;
       case '/private-insolvency':
         return <PrivateInsolvency />;
+      case '/downpayment-tracker':
+        return <DownpaymentTracker />;
       default:
         window.history.pushState({}, '', '/companies');
         return <CompanySwitcher />;

@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   ShoppingCart,
   ShieldCheck,
+  WalletCards,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from './Button';
@@ -36,7 +37,7 @@ interface NavItem {
   icon: LucideIcon;
   path: string;
   country?: string;
-  section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private' | 'Samly admin';
+  section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private' | 'Samly' | 'Samly admin';
 }
 
 type SamlyFreeSetupUsage = {
@@ -69,17 +70,19 @@ const navItems: NavItem[] = [
   { name: 'Settings', icon: Settings, path: '/settings', section: 'Accounting' },
   { name: 'Audit Log', icon: FileText, path: '/audit-log', section: 'Accounting' },
   { name: 'Private Insolvency', icon: ShieldCheck, path: '/private-insolvency', section: 'Private' },
+  { name: 'Downpayment tracker', icon: WalletCards, path: '/downpayment-tracker', section: 'Samly' },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [samlyAdmin, setSamlyAdmin] = useState(false);
+  const [samlyAccount, setSamlyAccount] = useState(false);
   const [samlyFreeSetup, setSamlyFreeSetup] = useState<SamlyFreeSetupUsage | null>(null);
   useEffect(() => { void supabase.rpc('is_samly_admin').then(({ data }) => setSamlyAdmin(!!data)); }, []);
   useEffect(() => {
     void supabase.rpc('samly_free_setup_usage').then(({ data, error }) => {
-      if (!error && data?.plan_code === 'free_setup') setSamlyFreeSetup(data as SamlyFreeSetupUsage);
+      if (!error && data?.plan_code) { setSamlyAccount(true); if (data.plan_code === 'free_setup') setSamlyFreeSetup(data as SamlyFreeSetupUsage); }
     });
   }, []);
 
