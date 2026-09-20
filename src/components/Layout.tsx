@@ -105,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <div>
-                <h1 className="text-xl font-bold">Accountant Niki SKENE</h1>
+                <>{samlyAccount ? <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly" className="h-12 w-auto" /> : <h1 className="text-xl font-bold">Accountant Niki SKENE</h1>}</>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -167,7 +167,7 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <Menu className="w-6 h-6" />
                 </button>
-                <h2 className="ml-3 text-base font-semibold text-gray-900 lg:hidden">Accountant Niki SKENE</h2>
+                <h2 className="ml-3 text-base font-semibold text-gray-900 lg:hidden">{samlyAccount ? 'Samly' : 'Accountant Niki SKENE'}</h2>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
