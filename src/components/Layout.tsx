@@ -27,6 +27,7 @@ import {
 import { Button } from './Button';
 import { Select } from './Select';
 import { supabase } from '../lib/supabase';
+import { SamlyFirstUseTour } from './SamlyFirstUseTour';
 
 interface LayoutProps {
   children: ReactNode;
@@ -74,7 +75,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
+  const { user, workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [samlyAdmin, setSamlyAdmin] = useState(false);
   const [samlyAccount, setSamlyAccount] = useState(false);
@@ -171,6 +172,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+              {samlyAccount && user && <SamlyFirstUseTour userId={user.id} onNavigate={handleNavigation} />}
               {workspaces.length > 0 && <Select value={workspaceId || ''} onChange={(e) => selectWorkspace(e.target.value)} className="max-w-[135px] sm:max-w-none sm:min-w-[210px]">
                 {workspaces.map(company => <option key={company.id} value={company.id}>{company.trade_name || company.legal_name}</option>)}
               </Select>}
