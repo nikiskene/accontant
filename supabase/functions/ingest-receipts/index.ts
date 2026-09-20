@@ -10,7 +10,7 @@ function check<T>(result:{data:T;error:unknown}):T{if(result.error)throw result.
 function errorText(error:unknown){if(error instanceof Error)return error.message;if(error&&typeof error==='object'){const value=error as {message?:unknown;details?:unknown;hint?:unknown};const text=[value.message,value.details,value.hint].filter((part):part is string=>typeof part==='string'&&part.trim().length>0).join(' ');if(text)return text;}return 'Extraction failed';}
 interface GraphMessage{id:string;internetMessageId?:string;subject?:string;receivedDateTime?:string;from?:{emailAddress:{address:string}};toRecipients?:{emailAddress:{address:string}}[];ccRecipients?:{emailAddress:{address:string}}[];internetMessageHeaders?:Header[];body?:{content:string;contentType:string};'@removed'?:unknown}
 interface Attachment{id:string;name:string;contentType:string;size:number;isInline:boolean;'@odata.type':string}
-interface Mailbox{id:string;mailbox:string;enabled:boolean;ai_enabled:boolean;start_at:string;delta_url:string|null}
+interface Mailbox{id:string;mailbox:string;provider:string;enabled:boolean;ai_enabled:boolean;start_at:string;delta_url:string|null}
 interface IngestionSummary{mailbox:string;emails_seen:number;candidates:number;by_status:Record<string,number>;failure_reasons:Record<string,number>;ai_extractions:number}
 const schema={type:'object',additionalProperties:false,required:['vendor','document_date','currency','gross_amount','invoice_number','description'],properties:{vendor:{type:['string','null']},document_date:{type:['string','null']},currency:{type:['string','null']},gross_amount:{type:['number','null']},invoice_number:{type:['string','null']},description:{type:'string'}}};
 async function request(url:string,token:string){
@@ -139,17 +139,19 @@ Deno.serve(async req=>{
  const auth=createClient(env('SUPABASE_URL'),env('SUPABASE_ANON_KEY'),{global:{headers:{Authorization:req.headers.get('Authorization')||''}}});
  if(!isJob){const{data:{user},error}=await auth.auth.getUser();if(error||!user)return json({error:'Unauthorized'},401);if(!body.mailbox_id)return json({error:'Mailbox required'},400);const allowed=check(await auth.rpc('can_review_receipt_mailbox',{p_id:body.mailbox_id}));if(!allowed)return json({error:'Forbidden'},403);}
  const query=db.from('receipt_mailboxes').select('*');const boxes:Mailbox[]=check(await(body.mailbox_id?query.eq('id',body.mailbox_id):query.eq('enabled',true)));
- const access=await token();
+ const graphBoxes=boxes.filter(box=>box.provider==='microsoft_graph'); const access=graphBoxes.length?await token():null;
  const summaries:IngestionSummary[]=[];
  for(const box of boxes){mailboxId=box.id;
  const lease=check(await db.rpc('claim_receipt_mailbox',{p_id:box.id}));if(!lease)continue;
  try{
+ if(box.provider==='microsoft_graph'){
  const aliases:Alias[]=check(await db.from('receipt_aliases').select('alias,workspace_id').eq('mailbox_id',box.id));
  const root=`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(box.mailbox)}`;
  const url=box.delta_url||`${root}/mailFolders/inbox/messages/delta?$select=id,receivedDateTime&$filter=receivedDateTime%20ge%20${encodeURIComponent(box.start_at)}`;
- const page=await(await request(url,access)).json();
- for(const item of page.value as GraphMessage[]){if(item['@removed'])continue;const message:GraphMessage=await(await request(`${root}/messages/${encodeURIComponent(item.id)}?$select=id,internetMessageId,subject,receivedDateTime,from,toRecipients,ccRecipients,internetMessageHeaders,body`,access)).json();await discover(box,message,access,aliases);}
+ const page=await(await request(url,access!)).json();
+ for(const item of page.value as GraphMessage[]){if(item['@removed'])continue;const message:GraphMessage=await(await request(`${root}/messages/${encodeURIComponent(item.id)}?$select=id,internetMessageId,subject,receivedDateTime,from,toRecipients,ccRecipients,internetMessageHeaders,body`,access!)).json();await discover(box,message,access!,aliases);}
  check(await db.from('receipt_mailboxes').update({delta_url:page['@odata.nextLink']||page['@odata.deltaLink'],last_success:new Date().toISOString(),last_error:null}).eq('id',box.id));
+ }
  const received=check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','received').limit(25));
  const retryable=received.length<25?check(await db.from('receipt_candidates').select('id,receipt_emails!inner(mailbox_id)').eq('receipt_emails.mailbox_id',box.id).eq('status','failed').in('failure_reason',['Extraction failed','unsupported Unicode escape sequence \\u0000 cannot be converted to text.']).limit(25-received.length)):[];
  const pending=[...received,...retryable];

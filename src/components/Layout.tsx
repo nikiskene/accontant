@@ -39,6 +39,11 @@ interface NavItem {
   section: 'Company' | 'Sales' | 'Costs' | 'Accounting' | 'Private' | 'Samly admin';
 }
 
+type SamlyFreeSetupUsage = {
+  plan_code: string;
+  usage: { customers: number; invoices: number; receipts: number };
+};
+
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies', section: 'Company' },
   { name: 'Company Credentials', icon: Building2, path: '/company-profile', section: 'Company' },
@@ -70,7 +75,13 @@ export function Layout({ children }: LayoutProps) {
   const { workspace, workspaces, workspaceId, selectWorkspace, taxYears, selectedTaxYearId, setSelectedTaxYearId, hasWorkspaceAccess, signOut } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [samlyAdmin, setSamlyAdmin] = useState(false);
+  const [samlyFreeSetup, setSamlyFreeSetup] = useState<SamlyFreeSetupUsage | null>(null);
   useEffect(() => { void supabase.rpc('is_samly_admin').then(({ data }) => setSamlyAdmin(!!data)); }, []);
+  useEffect(() => {
+    void supabase.rpc('samly_free_setup_usage').then(({ data, error }) => {
+      if (!error && data?.plan_code === 'free_setup') setSamlyFreeSetup(data as SamlyFreeSetupUsage);
+    });
+  }, []);
 
   const currentPath = window.location.pathname;
 
@@ -122,6 +133,15 @@ export function Layout({ children }: LayoutProps) {
             </nav>
 
             <div className="p-4 border-t border-gray-800">
+              {samlyFreeSetup && <div className="mb-3 rounded-xl border border-blue-400/30 bg-blue-500/10 p-3 text-sm text-blue-50">
+                <div className="flex items-center justify-between gap-2"><span className="font-semibold">Free setup</span><span className="text-xs text-blue-200">no expiry</span></div>
+                <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[11px] text-blue-100">
+                  <span><b className="block text-sm text-white">{Math.max(0, 10 - samlyFreeSetup.usage.customers)}</b>customers</span>
+                  <span><b className="block text-sm text-white">{Math.max(0, 10 - samlyFreeSetup.usage.invoices)}</b>invoices</span>
+                  <span><b className="block text-sm text-white">{Math.max(0, 10 - samlyFreeSetup.usage.receipts)}</b>receipts</span>
+                </div>
+                <button onClick={() => handleNavigation('/samly/app')} className="mt-3 w-full rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-blue-50">Subscribe</button>
+              </div>}
               <Button
                 variant="ghost"
                 className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
