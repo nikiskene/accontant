@@ -22,12 +22,14 @@ import {
   ShoppingCart,
   ShieldCheck,
   WalletCards,
+  Bug,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from './Button';
 import { Select } from './Select';
 import { supabase } from '../lib/supabase';
 import { SamlyFirstUseTour } from './SamlyFirstUseTour';
+import { SamlyBugReport } from './SamlyBugReport';
 
 interface LayoutProps {
   children: ReactNode;
@@ -117,7 +119,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto p-4">
-              {[...navItems, ...(samlyAdmin ? [{ name: 'Samly customers', icon: Users, path: '/samly-admin', section: 'Samly admin' as const }, { name: 'Feature requests', icon: ClipboardList, path: '/samly/feedback', section: 'Samly admin' as const }] : [])].filter(item => (!item.country || item.country === workspace?.country) && !(samlyAccount && item.path === '/private-insolvency') && !((!samlyAccount || samlyAdmin) && item.path === '/downpayment-tracker')).map((item, index, visible) => {
+              {[...navItems, ...(samlyAdmin ? [{ name: 'Samly customers', icon: Users, path: '/samly-admin', section: 'Samly admin' as const }, { name: 'Feature requests', icon: ClipboardList, path: '/samly/feedback', section: 'Samly admin' as const }, { name: 'Bug reports', icon: Bug, path: '/samly-bug-reports', section: 'Samly admin' as const }] : [])].filter(item => (!item.country || item.country === workspace?.country) && !(samlyAccount && item.path === '/private-insolvency') && !((!samlyAccount || samlyAdmin) && item.path === '/downpayment-tracker')).map((item, index, visible) => {
                 const Icon = item.icon;
                 const isActive = currentPath === item.path;
                 return (
@@ -212,6 +214,8 @@ export function Layout({ children }: LayoutProps) {
           </main>
         </div>
       </div>
+
+      <SamlyBugReport />
 
       {sidebarOpen && (
         <div

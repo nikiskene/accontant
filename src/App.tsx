@@ -37,6 +37,7 @@ import { ReceiptInbox } from './pages/ReceiptInbox';
 import { EmailIngestionSettings } from './pages/EmailIngestionSettings';
 import { SamlyApp } from './pages/SamlyApp';
 import { SamlyAdmin } from './pages/SamlyAdmin';
+import { SamlyBugReports } from './pages/SamlyBugReports';
 
 function Router() {
   const { user, loading } = useApp();
@@ -52,7 +53,7 @@ function Router() {
   }, []);
 
   const samlyDomain = /(^|\.)samly\.cc$/i.test(window.location.hostname);
-  const accountantPath = ['/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/downpayment-tracker','/receipt-inbox','/email-ingestion','/samly-admin'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
+  const accountantPath = ['/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/downpayment-tracker','/receipt-inbox','/email-ingestion','/samly-admin','/samly-bug-reports'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
   if ((samlyDomain && !accountantPath) || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
@@ -83,6 +84,8 @@ function Router() {
     switch (currentPath) {
       case '/samly-admin':
         return <SamlyAdmin />;
+      case '/samly-bug-reports':
+        return <SamlyBugReports />;
       case '/receipt-inbox':
         return <ReceiptInbox />;
       case '/email-ingestion':

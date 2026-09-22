@@ -13,6 +13,8 @@ export function Settings() {
   const [receiptLocal, setReceiptLocal] = useState('');
   const [receiptAddress, setReceiptAddress] = useState<string | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
+  const [bugReportingEnabled, setBugReportingEnabled] = useState(true);
+  const [bugPreferenceBusy, setBugPreferenceBusy] = useState(false);
 
   const [workspaceForm, setWorkspaceForm] = useState({
     legal_name: workspace?.legal_name || '',
@@ -28,6 +30,15 @@ export function Settings() {
     default_revenue_account_id: workspaceSettings?.default_revenue_account_id || '',
     default_expense_account_id: workspaceSettings?.default_expense_account_id || '',
   });
+
+  useEffect(() => {
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('samly_user_preferences').select('bug_reporting_enabled').eq('user_id', user.id).maybeSingle();
+      setBugReportingEnabled(data?.bug_reporting_enabled ?? true);
+    })();
+  }, []);
 
   useEffect(() => {
     if (workspace) {
@@ -135,6 +146,8 @@ export function Settings() {
         </div>
 
         {receiptAddress && <form onSubmit={saveReceiptAddress} className="bg-white rounded-lg shadow p-6"><h2 className="text-xl font-semibold text-gray-900 mb-2">Your Samly receipt address</h2><p className="mb-4 text-sm text-gray-600">Choose a readable address for forwarding bills and receipts. Earlier addresses remain active, so no receipt is lost.</p><div className="flex max-w-xl items-end gap-2"><Input label="Address" value={receiptLocal} onChange={e=>setReceiptLocal(e.target.value.toLowerCase())} required /><span className="mb-2 whitespace-nowrap text-sm text-gray-600">@inbound.samly.cc</span><Button type="submit" disabled={receiptBusy}>{receiptBusy ? 'Saving...' : 'Save'}</Button></div><p className="mt-3 text-sm font-medium text-blue-800">Current: {receiptAddress}</p></form>}
+
+        <section className="bg-white rounded-lg shadow p-6"><h2 className="text-xl font-semibold text-gray-900">Bug reporting</h2><p className="mt-1 text-sm text-gray-600">Show the small bug button and attach a private screenshot of the current page when you submit a report.</p><label className="mt-4 flex cursor-pointer items-center gap-3 text-sm font-medium text-gray-800"><input type="checkbox" checked={bugReportingEnabled} disabled={bugPreferenceBusy} onChange={async e=>{const enabled=e.target.checked;setBugPreferenceBusy(true);const { data: { user } }=await supabase.auth.getUser();const { error }=user?await supabase.from('samly_user_preferences').upsert({user_id:user.id,bug_reporting_enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'user_id'}):{error:new Error('Authentication required')};setBugPreferenceBusy(false);if(error){setError(error.message);return;}setBugReportingEnabled(enabled);}} className="h-4 w-4 rounded border-gray-300 text-blue-600"/> Show floating bug-report button</label></section>
 
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Default Accounts</h2>
