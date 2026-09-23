@@ -13,10 +13,12 @@ jobs:
       - name: Poll the protected receipt mailbox
         env:
           RECEIPT_JOB_KEY: ${{ secrets.RECEIPT_INGESTION_JOB_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           curl --fail-with-body --retry 2 --retry-all-errors \
             --request POST \
             --header "content-type: application/json" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             --header "x-receipt-job-key: ${RECEIPT_JOB_KEY}" \
             --data '{}' \
             https://ndktajhxihahgfdcsuij.supabase.co/functions/v1/ingest-receipts
