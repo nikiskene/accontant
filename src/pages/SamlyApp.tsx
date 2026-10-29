@@ -1,4 +1,5 @@
-import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
+import { LanguageProvider } from '../contexts/LanguageContext';
+import { SamlySchedule } from './SamlySchedule';
 import { Home } from './Home';
 import { SamlyLogin } from './SamlyLogin';
 import { SamlySignup } from './SamlySignup';
@@ -9,8 +10,8 @@ import { SamlyForgotPassword, SamlyResetPassword } from './SamlyPasswordReset';
 import { SamlyEulaAcceptance } from './SamlyEulaAcceptance';
 
 function SamlyRoutes() {
-  const { language } = useLanguage();
-  const path = window.location.pathname;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/schedule' || path === '/samly/schedule') return <SamlySchedule />;
   if (path === '/samly/legal' || ['/samly/terms','/samly/privacy','/samly/cancellation','/samly/dpa'].includes(path)) return <SamlyLegal />;
   if (path === '/samly/feedback') return <SamlyFeedback />;
   if (path === '/samly/signup') return <SamlySignup />;
