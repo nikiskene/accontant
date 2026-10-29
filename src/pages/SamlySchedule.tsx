@@ -25,6 +25,11 @@ export function SamlySchedule() {
         <iframe src={calendarUrl} title={de ? 'Termin mit Niki buchen' : 'Book a Samly call with Niki'} className="block h-[1050px] w-full border-0 sm:h-[900px]" referrerPolicy="strict-origin-when-cross-origin" />
       </div>
       <p className="mt-4 px-2 text-sm text-slate-600"><a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-700 underline underline-offset-4">{de ? 'Kalender in einem neuen Tab öffnen' : 'Open calendar in a new tab'}</a></p>
+      <nav aria-label={de ? 'Rechtliche Informationen' : 'Legal information'} className="mt-6 flex flex-wrap gap-5 px-2 text-sm text-slate-600">
+        <a href="/samly/legal?document=notice" className="hover:underline">{de ? 'Impressum' : 'Legal notice'}</a>
+        <a href="/samly/privacy" className="hover:underline">{de ? 'Datenschutz' : 'Privacy'}</a>
+        <a href="mailto:admin@iacy.com" className="hover:underline">admin@iacy.com</a>
+      </nav>
     </main>
   </div>;
 }
