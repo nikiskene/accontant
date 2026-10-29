@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 function navigate(path:string){window.history.pushState({},'',path);window.dispatchEvent(new PopStateEvent('popstate'));}
-type Account={display_name:string;plan_code:string;subscription_status:string};
+type Account={display_name:string;plan_code:string;subscription_status:string;complimentary_until:string|null};
 type Usage={usage:{customers:number;invoices:number;receipts:number}};
 
 export function SamlyBilling(){
  const {language}=useLanguage(),de=language==='de';
  const [account,setAccount]=useState<Account|null>(null),[usage,setUsage]=useState<Usage|null>(null),[message,setMessage]=useState(''),[busy,setBusy]=useState<'monthly'|'annual'|null>(null);
- useEffect(()=>{void(async()=>{const{data:{user}}=await supabase.auth.getUser();if(!user){navigate('/samly/login');return;}const{data:isAdmin}=await supabase.rpc('is_samly_admin');if(isAdmin){navigate('/companies');return;}const{data,error}=await supabase.from('samly_accounts').select('display_name,plan_code,subscription_status').maybeSingle();
+ useEffect(()=>{void(async()=>{const{data:{user}}=await supabase.auth.getUser();if(!user){navigate('/samly/login');return;}const{data:isAdmin}=await supabase.rpc('is_samly_admin');if(isAdmin){navigate('/companies');return;}const{data,error}=await supabase.from('samly_accounts').select('display_name,plan_code,subscription_status,complimentary_until').maybeSingle();
  if(error){setMessage(error.message);return;}
  const loadedAccount=data as Account|null;
  setAccount(loadedAccount);
  // Paid accounts already have access; do not strand them on the billing screen.
- if(loadedAccount?.subscription_status==='active'&&loadedAccount.plan_code!=='free_setup'){
+ if((loadedAccount?.complimentary_until&&new Date(loadedAccount.complimentary_until).getTime()>Date.now())||(loadedAccount?.subscription_status==='active'&&loadedAccount.plan_code!=='free_setup')){
   window.history.replaceState({},'', '/dashboard');
   window.dispatchEvent(new PopStateEvent('popstate'));
   return;

@@ -85,7 +85,7 @@ export function Layout({ children }: LayoutProps) {
   useEffect(() => { void supabase.rpc('is_samly_admin').then(({ data }) => setSamlyAdmin(!!data)); }, []);
   useEffect(() => {
     void supabase.rpc('samly_free_setup_usage').then(({ data, error }) => {
-      if (!error && data?.plan_code) { setSamlyAccount(true); if (data.plan_code === 'free_setup') setSamlyFreeSetup(data as SamlyFreeSetupUsage); }
+      if (!error && data?.plan_code) { setSamlyAccount(true); if (data.plan_code === 'free_setup' && !(data.complimentary_until && new Date(data.complimentary_until).getTime() > Date.now())) setSamlyFreeSetup(data as SamlyFreeSetupUsage); }
     });
   }, []);
 
