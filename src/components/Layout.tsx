@@ -108,7 +108,10 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <div>
-                <>{samlyAccount ? <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly" className="h-12 w-auto" /> : <h1 className="text-xl font-bold">Accountant Niki SKENE</h1>}</>
+                <div className="flex items-center gap-3">
+                  <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly logo" className="h-12 w-12 rounded-lg bg-white object-contain p-1" />
+                  <h1 className="text-2xl font-bold tracking-tight">samly</h1>
+                </div>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -170,7 +173,10 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <Menu className="w-6 h-6" />
                 </button>
-                <h2 className="ml-3 text-base font-semibold text-gray-900 lg:hidden">{samlyAccount ? 'Samly' : 'Accountant Niki SKENE'}</h2>
+                <div className="ml-3 flex items-center gap-2 lg:hidden">
+                  <img src="https://ndktajhxihahgfdcsuij.supabase.co/storage/v1/object/public/homepage-media/samlylogo.webp" alt="Samly logo" className="h-9 w-9 rounded-md bg-white object-contain" />
+                  <h2 className="text-lg font-semibold text-gray-900">samly</h2>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
