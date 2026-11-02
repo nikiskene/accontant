@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {receiptRequirements} from '../src/features/receipts/review.ts';
+import {emptyLine,bookingFor} from '../src/features/receipts/model.ts';
+const booking=(line={})=>({...bookingFor({booking:{},gross_amount:120}),lines:[{...emptyLine(),gross:120,...line}]});
+test('ordinary zero-VAT EUR receipt needs only expense and payment accounts',()=>assert.deepEqual(receiptRequirements(booking(),'EUR','EUR'),{inputVat:false,privateUse:false,nonDeductible:false,explanation:false,exchangeRate:false}));
+test('ordinary UAE AED receipt uses the same rules',()=>assert.equal(receiptRequirements(booking(),'AED','AED').exchangeRate,false));
+test('foreign currencies reveal rate for both entities',()=>{assert.equal(receiptRequirements(booking(),'USD','EUR').exchangeRate,true);assert.equal(receiptRequirements(booking(),'EUR','AED').exchangeRate,true);});
+test('VAT alone does not presume recovery',()=>{const needs=receiptRequirements(booking({tax:20,tax_rate:20}),'EUR','EUR');assert.equal(needs.inputVat,false);assert.equal(needs.explanation,true);});
+test('full and partial recovery require VAT account',()=>{for(const vat_recovery_percent of [100,50])assert.equal(receiptRequirements(booking({tax:20,vat_recovery_percent}),'EUR','EUR').inputVat,true);});
+test('private and restricted business portions request their accounts',()=>{const needs=receiptRequirements(booking({private_percent:20,deductible_percent:50}),'EUR','EUR');assert.equal(needs.privateUse,true);assert.equal(needs.nonDeductible,true);});
+test('fully private receipt has no business VAT or non-deductible business expense',()=>{const needs=receiptRequirements(booking({private_percent:100,tax:20,vat_recovery_percent:100,deductible_percent:50}),'EUR','EUR');assert.equal(needs.privateUse,true);assert.equal(needs.inputVat,false);assert.equal(needs.nonDeductible,false);});
+test('mixed splits reveal every account actually used',()=>{const b=booking();b.lines.push({...emptyLine(),gross:50,tax:5,vat_recovery_percent:100},{...emptyLine(),gross:50,private_percent:20,deductible_percent:50});const needs=receiptRequirements(b,'EUR','EUR');assert.ok(needs.inputVat&&needs.privateUse&&needs.nonDeductible);});
+test('visibility preserves all saved values, including unused accounts',()=>{const b=booking({private_percent:25,deductible_percent:50,vat_recovery_percent:75,tax:20});b.private_account_id='saved-private';b.vat_account_id='saved-vat';const before=JSON.stringify(b);receiptRequirements(b,'EUR','EUR');assert.equal(JSON.stringify(b),before);});
+test('rounding follows posted amounts',()=>{const needs=receiptRequirements(booking({gross:.01,tax:.01,vat_recovery_percent:1}),'EUR','EUR');assert.equal(needs.inputVat,false);});
