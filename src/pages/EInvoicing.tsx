@@ -85,7 +85,7 @@ function CompanyEInvoicing() {
   const field=(key:string,label:string,type='text')=><Input type={type} label={label} value={text(metadata[key])} onChange={e=>setMetadata({...metadata,[key]:e.target.value})}/>;
   if(workspace?.country!=='AE')return <p>Choose a UAE company to prepare e-invoicing.</p>;
   return <div className="max-w-5xl space-y-6">
-    <div><h1 className="text-3xl font-bold">E-invoicing preparation</h1><p className="mt-2 text-gray-600">Complete {workspace.legal_name}’s invoice details and connect Docflow for sandbox checks.</p></div>
+    <div><h1 className="text-3xl font-bold">E-invoicing preparation</h1><p className="mt-1 text-sm text-gray-500">Powered by DocFlow</p><p className="mt-2 text-gray-600">Complete {workspace.legal_name}’s invoice details and connect Docflow for sandbox checks.</p></div>
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Preparation only · Not activated</strong><p className="mt-1">Complete company details once, customer details once, then check each invoice. This screen prepares and tests invoices; production delivery and FTA reporting remain inactive.</p></div>
     {message&&<p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">{message}</p>}
     {!available?<p>{loading?'Loading preparation…':'Preparation is unavailable until the database update is installed.'}</p>:<>
