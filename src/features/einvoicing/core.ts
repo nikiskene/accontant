@@ -88,7 +88,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
     const override = obj(overrides[text(line.id)]);
     const vat = obj(line.vat_code);
     const category = categories[text(override.tax_category || vat.category)];
-    const unit = text(override.unit_code) || units[text(line.unit)];
+    const unit = text(override.unit_code) || (units[text(line.unit).toLowerCase()]||units[text(line.unit)]);
     const n = scaled(line.net_amount), t = scaled(line.vat_amount), g = scaled(line.gross_amount);
     const quantity = scaled(line.quantity,4), price = scaled(line.unit_price,2), rate = scaled(line.vat_rate,6);
     require(!!text(line.description), `${label}.description`, `Line ${i+1}: add a description.`);
