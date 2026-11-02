@@ -9,7 +9,7 @@ import { Select } from '../components/Select';
 import { Button } from '../components/Button';
 import { prepare, text, type Context, type Row } from '../features/einvoicing/core';
 
-const initialSettings = {mode:'preparation',vat_registered:false,tin:'',target_date:'',revenue_band:'unconfirmed',registration_type:'TL'};
+const initialSettings = {mode:'preparation',vat_status:'unconfirmed',vat_registered:false,tin:'',target_date:'',revenue_band:'unconfirmed',registration_type:'TL'};
 const initialMetadata = {buyer_reference:'',purchase_order:'',buyer:{type:'',country:'',tin:'',scheme:'',electronic_address:'',registration_number:'',registration_type:''},supply_date:'',payment_means:'',transaction_type:'',exchange_rate:'',credit_reason:'',lines:{}};
 const navigate = (path:string) => { history.pushState({},'',path);window.dispatchEvent(new PopStateEvent('popstate')); };
 
@@ -91,7 +91,7 @@ function CompanyEInvoicing() {
     {!available?<p>{loading?'Loading preparation…':'Preparation is unavailable until the database update is installed.'}</p>:<>
       <section className="rounded-xl border bg-white p-5 space-y-4"><h2 className="text-lg font-semibold">Company readiness</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select label="VAT registration" value={settings.vat_registered?'registered':'unconfirmed'} onChange={e=>setSettings({...settings,vat_registered:e.target.value==='registered'})}><option value="unconfirmed">Not confirmed</option><option value="registered">VAT registered</option></Select>
+          <Select label="VAT registration" value={text(settings.vat_status)||(settings.vat_registered?'registered':'unconfirmed')} onChange={e=>setSettings({...settings,vat_status:e.target.value,vat_registered:e.target.value==='registered'})}><option value="unconfirmed">Not confirmed</option><option value="registered">VAT registered</option><option value="not_registered">Not VAT registered — confirmed</option></Select>
           <Input label="Confirmed company TIN (10 digits)" inputMode="numeric" maxLength={10} value={text(settings.tin)} onChange={e=>setSettings({...settings,tin:e.target.value})}/>
           <Select label="Annual revenue" value={text(settings.revenue_band)} onChange={e=>setSettings({...settings,revenue_band:e.target.value})}><option value="unconfirmed">Confirm revenue band</option><option value="below_50m">Below AED 50 million</option><option value="at_least_50m">AED 50 million or more</option></Select>
           <Select label="Legal registration type" value={text(settings.registration_type)||'TL'} onChange={e=>setSettings({...settings,registration_type:e.target.value})}><option value="TL">Trade licence</option><option value="EID">Emirates ID</option><option value="PAS">Passport</option><option value="CD">Cabinet decision</option></Select><Input type="date" label="Planned activation date" value={text(settings.target_date)} onChange={e=>setSettings({...settings,target_date:e.target.value})}/>

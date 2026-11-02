@@ -50,9 +50,10 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
   const credit = d.document_type === 'credit_note';
   require(workspace.country === 'AE', 'company', 'UAE e-invoicing preparation applies only to a UAE company.');
   require(['invoice','credit_note'].includes(text(d.document_type)), 'document_type', 'Choose an invoice or credit note. Quotes are not e-invoices.');
-  require(settings.vat_registered === true, 'vat_registered', 'Confirm VAT registration. Non-VAT invoice support needs a separate validation review.');
+  if(settings.vat_status==='not_registered')require(false,'non_vat_provider_review','Not VAT registered — confirmed. The commercial-invoice route needs separate Docflow mapping and sandbox acceptance.');
+  else require(settings.vat_registered === true, 'vat_registered', 'Confirm whether the company is VAT registered.');
   require(/^\d{10}$/.test(text(settings.tin)), 'tin', 'Confirm the company’s 10-digit TIN from its FTA records.');
-  require(/^\d{15}$/.test(text(profile.vat_number)), 'seller.vat_number', 'Enter the seller’s 15-digit VAT TRN.');
+  if(settings.vat_registered===true)require(/^\d{15}$/.test(text(profile.vat_number)), 'seller.vat_number', 'Enter the seller’s 15-digit VAT TRN.');
   const seller: Row = { name: issued ? text(issuer.legal_name) : text(workspace.legal_name), tin: text(settings.tin), vatNumber: text(profile.vat_number), registrationNumber: text(profile.trade_licence_number), registrationType: text(settings.registration_type) || 'TL', authority: text(profile.licensing_authority), address: text(profile.address_line_1), city: text(profile.city), subdivision: text(profile.state_region), country: 'AE' };
   for (const field of ['name','registrationNumber','authority','address','city','subdivision']) require(!!seller[field], `seller.${field}`, `Complete the seller’s ${field === 'registrationNumber' ? 'trade licence number' : field} in Company credentials.`);
   const buyerData: Row = { name: text(customer.company_name || customer.name || customer.alias), address: text(customer.street_address), city: text(customer.city), subdivision: text(customer.state), country: text(buyer.country || customer.country).toUpperCase(), vatNumber: text(customer.vat_trn), tin: text(buyer.tin), electronicAddress: text(buyer.electronic_address), scheme: text(buyer.scheme), registrationNumber: text(buyer.registration_number), registrationType: text(buyer.registration_type), type: text(buyer.type) };

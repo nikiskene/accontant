@@ -19,6 +19,6 @@ Automated regression suite: 41 passing checks. The test payloads contain synthet
 
 ## Remaining company setup
 
-Samly's TIN was saved as `1050487162`, derived from the user-provided TRN `105048716200001` using the FTA's first-ten-digits rule. VAT registration remains unconfirmed until the user identifies whether this is a VAT or Corporate Tax TRN. Do not populate or confirm a VAT identity from a Corporate Tax certificate alone.
+Samly's TIN was saved as `1050487162`, derived from the user-provided TRN `105048716200001` using the FTA's first-ten-digits rule. The user subsequently confirmed this is the Corporate Tax TRN, and confirmed after consulting their tax adviser that IACy is not VAT registered and does not need to register. Samly now stores confirmed non-registration, the Corporate Tax TRN in its own field, an empty VAT number and the derived TIN. Historical issued snapshots were not changed. The non-VAT commercial-invoice mapping still needs separate implementation and provider acceptance; the earlier successful synthetic tests covered the VAT tax-invoice route only.
 
 A verified real-company connection is not yet stored: Docflow's tax identity must be completed and matched. No password needs to be added to Netlify. The integration runtime and server-side encrypted credential store are in Supabase.

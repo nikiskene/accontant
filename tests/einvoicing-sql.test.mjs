@@ -25,7 +25,7 @@ async function database(){
  insert into counterparties values('${customer}','${w1}','Buyer LLC','both');
  select set_config('test.user','${user}',false);
  `);
- for(const name of ['011_add_commercial_documents.sql','012_add_quote_invoice_workflow.sql','014_add_company_legal_profiles.sql','016_add_supplier_invoices.sql','085_add_uae_einvoicing_preparation.sql','086_fix_credit_note_issuance.sql','087_add_einvoice_queue_and_inbox_review.sql','089_add_docflow_sandbox_setup.sql','090_recognize_docflow_validation_evidence.sql']) await db.exec(await readFile(new URL(`../supabase/manual/${name}`,import.meta.url),'utf8'));
+ for(const name of ['011_add_commercial_documents.sql','012_add_quote_invoice_workflow.sql','014_add_company_legal_profiles.sql','016_add_supplier_invoices.sql','085_add_uae_einvoicing_preparation.sql','086_fix_credit_note_issuance.sql','087_add_einvoice_queue_and_inbox_review.sql','089_add_docflow_sandbox_setup.sql','090_recognize_docflow_validation_evidence.sql','091_distinguish_confirmed_non_vat_status.sql']) await db.exec(await readFile(new URL(`../supabase/manual/${name}`,import.meta.url),'utf8'));
  await db.exec(`update company_legal_profiles set address_line_1='One street',city='Dubai';insert into sales_documents(id,workspace_id,document_type,document_number,customer_id,issue_date,currency,status,subtotal,tax_total,total) values('${invoice}','${w1}','invoice','INV-1','${customer}','2026-10-28','AED','draft',100,5,105);insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit_price,net_amount,vat_amount,gross_amount) values('${w1}','${invoice}',1,'Service',1,100,100,5,105);grant usage on schema public,auth to authenticated;`);
  return db;
 }
@@ -151,3 +151,4 @@ test('issuing a new document freezes the company e-invoice settings',async()=>{
  assert.equal((await db.query('select issuer_snapshot from sales_documents where id=$1',[invoice])).rows[0].issuer_snapshot.einvoice_settings.tin,'1001234567');
  }finally{await db.close();}
 });
+test('confirmed non-registration stays distinct from an unconfirmed VAT status',async()=>{const db=await database();try{await db.query('select save_einvoice_settings($1,$2::jsonb)',[w1,JSON.stringify({tin:'1050487162',vat_status:'not_registered',vat_registered:true})]);const s=(await db.query('select vat_status,vat_registered from einvoice_settings where workspace_id=$1',[w1])).rows[0];assert.equal(s.vat_status,'not_registered');assert.equal(s.vat_registered,false);}finally{await db.close();}});
