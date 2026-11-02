@@ -59,7 +59,7 @@ export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
    references:{...(reference?{buyerReference:reference}:{}),...(purchaseOrder?{purchaseOrder}:{})},seller,buyer,lines,
    taxBreakdown:[...taxGroups.values()].map(group=>({scheme:'VAT',categoryCode:group.categoryCode,rate:group.rate,taxableAmount:money(group.net),taxAmount:money(group.tax),...(group.reason?{exemptionReasonText:group.reason}:{}),...(group.reasonCode?{exemptionReasonCode:group.reasonCode}:{})})),
    totals:{lineExtensionTotal:money(net),allowanceTotal:0,chargeTotal:0,taxExclusiveAmount:money(net),taxTotal:money(tax),taxInclusiveAmount:money(gross),prepaidAmount:0,roundingAmount:0,payableAmount:money(gross)},
-   taxCurrency:{code:'AED',exchangeRate:Number(p.exchangeRate),taxTotal:money(aed(tax,rate)),taxInclusiveAmount:money(aed(gross,rate))},
+   ...(p.currency!=='AED'?{taxCurrency:{code:'AED',exchangeRate:Number(p.exchangeRate),taxTotal:money(aed(tax,rate)),taxInclusiveAmount:money(aed(gross,rate))}}:{}),
    paymentInstructions:[{id:'PI-1',meansCode:p.paymentMeans,paymentId:p.number,...(transfer?{bankTransfer:{accountId:bankId,accountScheme:bank.iban?'IBAN':null,accountName:text(bank.account_name)||text(p.seller.name),bankIdentifier:text(bank.bic_swift),bankCountryCode:'AE'}}:{})}]};
   return {payload,findings:[],ready:true,productionReady:false};
  }catch(error){return {payload:null,findings:[{field:'mapping',message:error instanceof Error?error.message:'Invoice mapping failed.'}],ready:false,productionReady:false};}

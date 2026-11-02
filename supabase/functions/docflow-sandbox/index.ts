@@ -47,8 +47,8 @@ Deno.serve(async req=>{
   const binding={workspaceId:workspace,providerCompanyId:connection.provider_company_id,tin:connection.tin,vatTrn:connection.vat_trn,environment:'sandbox' as const};
   const client=createDocFlowSandbox(binding,{getAccessToken:()=>openToken(connection.encrypted_access_token,env('DOCFLOW_CREDENTIAL_ENCRYPTION_KEY'),`${workspace}:${connection.provider_company_id}`)});
   const result=await client.validateCandidate(mapping.payload!);
-  const record=check(await db.from('docflow_validations').insert({workspace_id:workspace,document_id:documentId,payload:mapping.payload,provider_response:result.providerResponse,created_by:user.id}).select('id').single());
-  return json({id:record.id,environment:'sandbox',submitted:false,productionEnabled:false,validationVerified:false,providerResponse:result.providerResponse,message:'Sandbox validation response received and retained. Provider response semantics must be confirmed before production activation.'});
+  const record=check(await db.from('docflow_validations').insert({workspace_id:workspace,document_id:documentId,payload:mapping.payload,provider_response:result.providerResponse,validation_verified:result.validationVerified,created_by:user.id}).select('id').single());
+  return json({id:record.id,environment:'sandbox',submitted:false,productionEnabled:false,validationVerified:result.validationVerified,providerResponse:result.providerResponse,message:result.validationVerified?'Sandbox validation passed. No invoice was created, delivered or reported.':'Sandbox response received. Review the provider findings; no invoice was sent.'});
  }catch(error){
   // Deliberately do not log credentials, full invoice content or provider error bodies.
   const code=error&&typeof error==='object'&&'code'in error?String(error.code):'';

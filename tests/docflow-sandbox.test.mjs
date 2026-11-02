@@ -32,3 +32,11 @@ test('transport failures are sanitized and are not retried automatically',async(
  }
  const client=createDocFlowSandbox(scope(),{getAccessToken:async()=> 'token',fetch:async()=>{throw new Error('secret-token');}});await assert.rejects(client.verifyCompany(),/network_or_timeout/);
 });
+test('recognizes the observed successful response without confusing it with delivery',async()=>{
+ let calls=0;const client=createDocFlowSandbox(scope(),{getAccessToken:async()=> 'test-token',fetch:async()=>++calls===1?json(company()):new Response(JSON.stringify({success:true,data:{isValid:true,message:'Invoice payload is valid.',invoiceNumber:'SYNTHETIC'},errors:[]}))});
+ const result=await client.validateCandidate(candidate());assert.equal(result.validationVerified,true);assert.equal(result.submitted,false);assert.equal(result.environment,'sandbox');
+});
+test('retains documented field validation errors rather than losing the response on HTTP 400',async()=>{
+ let calls=0;const client=createDocFlowSandbox(scope(),{getAccessToken:async()=> 'test-token',fetch:async()=>++calls===1?json(company()):new Response(JSON.stringify({success:false,data:null,errors:[{field:'TaxCurrency.Code',message:'Tax currency must differ from document currency.',code:null}]}),{status:400})});
+ const result=await client.validateCandidate(candidate());assert.equal(result.validationVerified,false);assert.equal(result.providerResponse.errors[0].field,'TaxCurrency.Code');
+});

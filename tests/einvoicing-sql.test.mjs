@@ -25,7 +25,7 @@ async function database(){
  insert into counterparties values('${customer}','${w1}','Buyer LLC','both');
  select set_config('test.user','${user}',false);
  `);
- for(const name of ['011_add_commercial_documents.sql','012_add_quote_invoice_workflow.sql','014_add_company_legal_profiles.sql','016_add_supplier_invoices.sql','085_add_uae_einvoicing_preparation.sql','086_fix_credit_note_issuance.sql','087_add_einvoice_queue_and_inbox_review.sql','089_add_docflow_sandbox_setup.sql']) await db.exec(await readFile(new URL(`../supabase/manual/${name}`,import.meta.url),'utf8'));
+ for(const name of ['011_add_commercial_documents.sql','012_add_quote_invoice_workflow.sql','014_add_company_legal_profiles.sql','016_add_supplier_invoices.sql','085_add_uae_einvoicing_preparation.sql','086_fix_credit_note_issuance.sql','087_add_einvoice_queue_and_inbox_review.sql','089_add_docflow_sandbox_setup.sql','090_recognize_docflow_validation_evidence.sql']) await db.exec(await readFile(new URL(`../supabase/manual/${name}`,import.meta.url),'utf8'));
  await db.exec(`update company_legal_profiles set address_line_1='One street',city='Dubai';insert into sales_documents(id,workspace_id,document_type,document_number,customer_id,issue_date,currency,status,subtotal,tax_total,total) values('${invoice}','${w1}','invoice','INV-1','${customer}','2026-10-28','AED','draft',100,5,105);insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit_price,net_amount,vat_amount,gross_amount) values('${w1}','${invoice}',1,'Service',1,100,100,5,105);grant usage on schema public,auth to authenticated;`);
  return db;
 }
@@ -138,7 +138,7 @@ test('reference fields persist, and connection cannot be switched to production'
  await db.query('select save_einvoice_metadata($1,$2::jsonb)',[invoice,JSON.stringify({buyer_reference:'FINANCE',purchase_order:'PO-1'})]);
  assert.equal((await db.query('select buyer_reference from einvoice_document_metadata')).rows[0].buyer_reference,'FINANCE');
  await assert.rejects(db.query(`insert into docflow_connections(workspace_id,provider_company_id,tin,vat_trn,encrypted_access_token,environment)values('${w1}','${customer}','1001234567','100123456700003','cipher','production')`),/check constraint/);
- await assert.rejects(db.query(`insert into docflow_validations(workspace_id,document_id,payload,provider_response,validation_verified)values('${w1}','${invoice}','{}','{}',true)`),/check constraint/);
+ await assert.rejects(db.query(`insert into docflow_validations(workspace_id,document_id,payload,provider_response,environment)values('${w1}','${invoice}','{}','{}','production')`),/check constraint/);
  }finally{await db.close();}
 });
 test('issuing a new document freezes the company e-invoice settings',async()=>{

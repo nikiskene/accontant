@@ -38,7 +38,8 @@ export function createDocFlowSandbox(binding: DocFlowBinding, dependencies: Depe
       });
     } catch { throw new DocFlowSandboxError('network_or_timeout'); }
     // Never reflect provider error text, credentials or invoice content into logs/UI.
-    if(!response.ok)throw new DocFlowSandboxError(response.status===401||response.status===403?'authorization_failed':response.status===429?'rate_limited':`http_${response.status}`);
+    const validationFinding=response.status===400&&path==='/api/v1/invoices/validate';
+    if(!response.ok&&!validationFinding)throw new DocFlowSandboxError(response.status===401||response.status===403?'authorization_failed':response.status===429?'rate_limited':`http_${response.status}`);
     let envelope: ObjectValue;
     try { envelope=object(await response.json()); } catch { throw new DocFlowSandboxError('invalid_response'); }
     if(typeof envelope.success!=='boolean')throw new DocFlowSandboxError('invalid_response');
@@ -59,8 +60,10 @@ export function createDocFlowSandbox(binding: DocFlowBinding, dependencies: Depe
     if(body.companyId!==scope.providerCompanyId||object(seller.taxRegistration).id!==scope.tin||object(seller.taxIdentifier).id!==scope.vatTrn||object(seller.electronicAddress).id!==scope.tin||object(seller.electronicAddress).schemeId!=='0235')throw new DocFlowSandboxError('candidate_identity_mismatch');
     await verifyCompany();
     const result=await request('/api/v1/invoices/validate',{...body,isDraft:true});
-    // Validation response schema is not published; preserve evidence without claiming pass.
-    return {environment:'sandbox' as const,submitted:false as const,validationVerified:false as const,providerResponse:result};
+    // Observed on the live sandbox on 2026-11-02 for AED and USD synthetic invoices.
+    // Unknown shapes stay unverified; validation is never delivery or FTA reporting.
+    const validationVerified=result.success===true&&object(result.data).isValid===true&&Array.isArray(result.errors)&&result.errors.length===0;
+    return {environment:'sandbox' as const,submitted:false as const,validationVerified,providerResponse:result};
   }
   return {verifyCompany,validateCandidate};
 }
