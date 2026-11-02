@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import {
+  Camera,
   LayoutDashboard,
   Plus,
   Receipt,
@@ -60,6 +61,7 @@ const navItems: NavItem[] = [
   { name: 'Customers', icon: Users, path: '/customers', section: 'Sales' },
   { name: 'Document Layouts', icon: FileText, path: '/document-templates', section: 'Sales' },
   { name: 'New Sale', icon: Plus, path: '/new-sale', section: 'Sales' },
+  { name: 'Receipt Scanner', icon: Camera, path: '/receipt-scanner', section: 'Costs' },
   { name: 'Receipt Inbox', icon: Inbox, path: '/receipt-inbox', section: 'Costs' },
   { name: 'New Expense', icon: Receipt, path: '/new-expense', section: 'Costs' },
   { name: 'Trips', icon: Plane, path: '/trips', section: 'Costs' },
