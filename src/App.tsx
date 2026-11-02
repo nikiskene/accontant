@@ -34,6 +34,7 @@ import { DownpaymentTracker } from './pages/DownpaymentTracker';
 import { CorrectInvoice } from './pages/CorrectInvoice';
 
 import { ReceiptScanner } from './pages/ReceiptScanner';
+import { EInvoicing } from './pages/EInvoicing';
 import { ReceiptInbox } from './pages/ReceiptInbox';
 import { EmailIngestionSettings } from './pages/EmailIngestionSettings';
 import { SamlyApp } from './pages/SamlyApp';
@@ -54,7 +55,7 @@ function Router() {
   }, []);
 
   const samlyDomain = /(^|\.)samly\.cc$/i.test(window.location.hostname);
-  const accountantPath = ['/receipt-scanner','/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/downpayment-tracker','/receipt-inbox','/email-ingestion','/samly-admin','/samly-bug-reports'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
+  const accountantPath = ['/e-invoicing','/receipt-scanner','/companies','/dashboard','/sales-documents','/customers','/catalog','/new-quote','/correct-invoice','/company-profile','/suppliers','/company-banks','/receivables','/supplier-invoices','/new-supplier-invoice','/austrian-tax-setup','/fixed-assets','/statement-imports','/document-templates','/new-sale','/new-expense','/transactions','/trips','/bank-inbox','/reports','/settings','/audit-log','/private-insolvency','/downpayment-tracker','/receipt-inbox','/email-ingestion','/samly-admin','/samly-bug-reports'].some(path=>currentPath===path||currentPath.startsWith(`${path}/`));
   if (/^\/schedule\/?$/.test(currentPath) || (samlyDomain && !accountantPath) || currentPath === '/samly' || currentPath.startsWith('/samly/')) return <SamlyApp />;
 
   if (loading) {
@@ -89,6 +90,8 @@ function Router() {
         return <SamlyBugReports />;
       case '/receipt-scanner':
         return <ReceiptScanner />;
+      case '/e-invoicing':
+        return <EInvoicing />;
       case '/receipt-inbox':
         return <ReceiptInbox />;
       case '/email-ingestion':

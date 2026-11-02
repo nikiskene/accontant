@@ -24,7 +24,8 @@ function parseNumberSafe(v: string): number {
 }
 
 export function CustomerDetail({ customerId }: CustomerDetailProps) {
-  const { workspaceId } = useApp();
+  const { workspaceId,workspace } = useApp();
+  const [einvoiceProfile,setEinvoiceProfile]=useState<Record<string,string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -75,6 +76,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         return;
       }
 
+      setEinvoiceProfile(data.einvoice_profile||{});
       setFormData({
         alias: data.alias || '',
         company_name: data.company_name || '',
@@ -145,6 +147,7 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
         phone: formData.phone.trim() || null,
         email,
         vat_trn: formData.vat_trn.trim() || null,
+        einvoice_profile:einvoiceProfile,
         default_payment_terms: formData.default_payment_terms.trim() || null,
         open_balance: openBalance,
       };
@@ -302,6 +305,8 @@ export function CustomerDetail({ customerId }: CustomerDetailProps) {
             onChange={(e) => setFormData({ ...formData, vat_trn: e.target.value })}
             placeholder="For example: ATU12345678"
           />
+
+          {workspace?.country==='AE'&&<details className="border rounded-lg p-4" open={Object.values(einvoiceProfile).some(Boolean)}><summary className="cursor-pointer font-medium">Electronic invoice details (UAE)</summary><div className="space-y-3 mt-3"><p className="text-sm text-gray-600">Save these once for this customer. New invoices use these details; issued invoice snapshots retain their original identity.</p><label className="block text-sm">Customer type<select className="block w-full border rounded-lg p-3" value={einvoiceProfile.type||''} onChange={e=>setEinvoiceProfile({...einvoiceProfile,type:e.target.value})}><option value="">Confirm type</option><option value="business">Business</option><option value="consumer">Consumer</option></select></label>{[['tin','Confirmed TIN (10 digits for UAE)'],['electronic_address','Electronic invoice address'],['scheme','Address scheme (0235 for UAE TIN)'],['registration_number','Legal registration number'],['registration_type','Registration type (TL, EID, PAS or CD)']].map(([key,label])=><Input key={key} label={label} value={einvoiceProfile[key]||''} onChange={e=>setEinvoiceProfile({...einvoiceProfile,[key]:e.target.value})}/>)}<Button type="button" variant="secondary" disabled={!/^\d{10}$/.test(einvoiceProfile.tin||'')} onClick={()=>setEinvoiceProfile({...einvoiceProfile,electronic_address:einvoiceProfile.tin,scheme:'0235'})}>Use confirmed UAE TIN as electronic address</Button></div></details>}
 
           <Input
             label="Open Balance"

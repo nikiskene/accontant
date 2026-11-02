@@ -51,6 +51,7 @@ type SamlyFreeSetupUsage = {
 
 const navItems: NavItem[] = [
   { name: 'Companies', icon: Building2, path: '/companies', section: 'Company' },
+  { name: 'E-invoicing', icon: ShieldCheck, path: '/e-invoicing', country: 'AE', section: 'Company' },
   { name: 'Company Credentials', icon: Building2, path: '/company-profile', section: 'Company' },
   { name: 'Bank Details', icon: Building2, path: '/company-banks', section: 'Company' },
   { name: 'Tax Years', icon: ClipboardList, path: '/austrian-tax-setup', section: 'Company' },
