@@ -1,3 +1,5 @@
+> Updated mapping and scenario coverage: see [3 November acceptance preparation](uae-invoice-acceptance-2026-11-03.md). The boundaries below describe the original 2 November release.
+
 # Docflow preparation for January 2027
 
 Release date: 2 November 2026. Production delivery and FTA reporting are **not activated**.

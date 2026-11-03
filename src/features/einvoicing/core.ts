@@ -1,4 +1,5 @@
 /** Provider-neutral preparation. Passing these checks is NOT PINT-AE certification. */
+import {conditionalFindings} from './details.ts';
 export type Row = Record<string, unknown>;
 export type Finding = { field: string; message: string };
 export type Preparation = {
@@ -48,37 +49,42 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
   const customerDefaults = issued ? obj(customer.einvoice_profile) : obj(context.customer.einvoice_profile);
   const buyer = {...customerDefaults,...Object.fromEntries(Object.entries(obj(m.buyer)).filter(([,value])=>text(value)!==''))};
   const credit = d.document_type === 'credit_note';
+  const nonVat = settings.vat_status === 'not_registered';
   require(workspace.country === 'AE', 'company', 'UAE e-invoicing preparation applies only to a UAE company.');
   require(['invoice','credit_note'].includes(text(d.document_type)), 'document_type', 'Choose an invoice or credit note. Quotes are not e-invoices.');
-  if(settings.vat_status==='not_registered')require(false,'non_vat_provider_review','Not VAT registered — confirmed. The commercial-invoice route needs separate Docflow mapping and sandbox acceptance.');
-  else require(settings.vat_registered === true, 'vat_registered', 'Confirm whether the company is VAT registered.');
-  require(/^\d{10}$/.test(text(settings.tin)), 'tin', 'Confirm the company’s 10-digit TIN from its FTA records.');
-  if(settings.vat_registered===true)require(/^\d{15}$/.test(text(profile.vat_number)), 'seller.vat_number', 'Enter the seller’s 15-digit VAT TRN.');
-  const seller: Row = { name: issued ? text(issuer.legal_name) : text(workspace.legal_name), tin: text(settings.tin), vatNumber: text(profile.vat_number), registrationNumber: text(profile.trade_licence_number), registrationType: text(settings.registration_type) || 'TL', authority: text(profile.licensing_authority), address: text(profile.address_line_1), city: text(profile.city), subdivision: text(profile.state_region), country: 'AE' };
+  if(!nonVat) require(settings.vat_registered === true, 'vat_registered', 'Confirm whether the company is VAT registered.');
+  require(/^1\d{9}$/.test(text(settings.tin)), 'tin', 'Confirm the company’s 10-digit TIN from its FTA records.');
+  if(settings.vat_registered===true)require(/^1\d{12}03$/.test(text(profile.vat_number)), 'seller.vat_number', 'Enter the seller’s 15-digit VAT TRN.');
+  const seller: Row = { name: issued ? text(issuer.legal_name) : text(workspace.legal_name), tin: text(settings.tin), vatNumber: text(profile.vat_number), vatStatus: nonVat?'not_registered':'registered', registrationNumber: text(profile.trade_licence_number), registrationType: text(settings.registration_type) || 'TL', authority: text(profile.licensing_authority), address: text(profile.address_line_1), city: text(profile.city), subdivision: text(profile.state_region), country: 'AE' };
   for (const field of ['name','registrationNumber','authority','address','city','subdivision']) require(!!seller[field], `seller.${field}`, `Complete the seller’s ${field === 'registrationNumber' ? 'trade licence number' : field} in Company credentials.`);
-  const buyerData: Row = { name: text(customer.company_name || customer.name || customer.alias), address: text(customer.street_address), city: text(customer.city), subdivision: text(customer.state), country: text(buyer.country || customer.country).toUpperCase(), vatNumber: text(customer.vat_trn), tin: text(buyer.tin), electronicAddress: text(buyer.electronic_address), scheme: text(buyer.scheme), registrationNumber: text(buyer.registration_number), registrationType: text(buyer.registration_type), type: text(buyer.type) };
+  const buyerData: Row = { name: text(customer.company_name || customer.name || customer.alias), address: text(customer.street_address), city: text(customer.city), subdivision: text(customer.state), country: text(buyer.country || customer.country).toUpperCase(), vatNumber: text(customer.vat_trn), tin: text(buyer.tin), electronicAddress: buyer.routing === 'uae_fallback' && text(buyer.country || customer.country).toUpperCase() === 'AE' ? '9900000098' : buyer.routing === 'export_fallback' && text(buyer.country || customer.country).toUpperCase() !== 'AE' ? '9900000099' : text(buyer.electronic_address), scheme: buyer.routing === 'uae_fallback' && text(buyer.country || customer.country).toUpperCase() === 'AE' ? '0235' : buyer.routing === 'export_fallback' && text(buyer.country || customer.country).toUpperCase() !== 'AE' ? '0235' : text(buyer.scheme), registrationNumber: text(buyer.registration_number), registrationType: text(buyer.registration_type), authority: text(buyer.registration_authority), passportCountry: text(buyer.passport_country), routing: text(buyer.routing), type: text(buyer.type) };
   require(buyerData.type === 'business', 'buyer.type', 'Confirm a business customer. Consumer or unclear transactions need separate scope review.');
   for (const field of ['name','address','city']) require(!!buyerData[field], `buyer.${field}`, `Complete the customer’s ${field}.`);
   require(/^[A-Z]{2}$/.test(text(buyerData.country)), 'buyer.country', 'Use a two-letter country code, such as AE or AT.');
   if (buyerData.country === 'AE') {
     require(!!buyerData.subdivision, 'buyer.subdivision', 'Complete the customer’s emirate.');
-    require(/^\d{10}$/.test(text(buyerData.tin)), 'buyer.tin', 'Enter the UAE business customer’s confirmed 10-digit TIN.');
+    if (buyer.routing === 'uae_fallback') {
+      require(!!buyerData.vatNumber || !!buyerData.registrationNumber, 'buyer.identity', 'For a buyer not yet on e-invoicing, provide its VAT identity or legal registration.');
+    } else {
+    require(/^1\d{9}$/.test(text(buyerData.tin)), 'buyer.tin', 'Enter the UAE business customer’s confirmed 10-digit TIN.');
     require(buyerData.scheme === '0235' && buyerData.electronicAddress === buyerData.tin, 'buyer.endpoint', 'Use scheme 0235 and the confirmed customer TIN for the UAE endpoint.');
+    }
   } else {
     require(!!buyerData.electronicAddress && !!buyerData.scheme, 'buyer.endpoint', 'The provider must confirm the foreign buyer’s endpoint or applicable fallback.');
-    require(false, 'export_review', 'Foreign-buyer and export scenarios require provider mapping and acceptance testing before activation.');
+    require(['peppol','export_fallback'].includes(text(buyer.routing)), 'buyer.routing', 'Confirm the foreign customer’s electronic routing.');
+    require(text(m.transaction_type).endsWith('1'), 'transaction_type', 'Confirm the export flag for this foreign buyer.');
   }
-  if (buyerData.vatNumber) require(/^\d{15}$/.test(text(buyerData.vatNumber)) || buyerData.country !== 'AE', 'buyer.vatNumber', 'The UAE buyer VAT TRN must contain 15 digits.');
+  if (buyerData.vatNumber) require(/^1\d{12}03$/.test(text(buyerData.vatNumber)) || buyerData.country !== 'AE', 'buyer.vatNumber', 'The UAE buyer VAT TRN must contain 15 digits.');
   require(validDate(d.issue_date), 'issue_date', 'Enter a valid invoice issue date.');
   require(/^[A-Z]{3}$/.test(text(d.currency)), 'currency', 'Select a three-letter invoice currency.');
   require(validDate(m.supply_date || d.service_date), 'supply_date', 'Record an exact supply date for electronic invoicing.');
-  require(['1','10','30','42','48','49','58','59'].includes(text(m.payment_means)), 'payment_means', 'Select the payment method.');
+  require(['10','30','49','54','55','68'].includes(text(m.payment_means)), 'payment_means', 'Select the payment method.');
   require(/^[01]{8}$/.test(text(m.transaction_type)), 'transaction_type', 'Confirm the eight transaction classification flags.');
-  if (text(m.transaction_type) !== '00000000') require(false, 'scenario_review', 'Special transaction scenarios require provider mapping and acceptance testing before activation.');
+  for (const finding of conditionalFindings(context, buyerData, nonVat)) findings.push(finding);
   const exchangeRate = text(d.currency) === 'AED' ? 100000000n : scaled(m.exchange_rate,8);
   if (text(d.currency) !== 'AED') {
     require((exchangeRate || 0n) > 0n, 'exchange_rate', 'Record the applicable exchange rate to AED.');
-    require(false, 'currency_review', 'Foreign-currency AED tax mapping must pass provider acceptance tests before activation.');
+    require(/^[0-9]+(?:\.[0-9]{1,6})?$/.test(text(m.exchange_rate).replace(/0+$/, '').replace(/\.$/, '')) || /^[0-9]+$/.test(text(m.exchange_rate)), 'exchange_rate_precision', 'Use an exchange rate with at most six decimal places for Docflow.');
   }
   require(context.lines.length > 0, 'lines', 'Add at least one invoice line.');
   const overrides = obj(m.lines);
@@ -87,7 +93,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
     const label = `lines.${i + 1}`;
     const override = obj(overrides[text(line.id)]);
     const vat = obj(line.vat_code);
-    const category = categories[text(override.tax_category || vat.category)];
+    const category = nonVat ? 'O' : categories[text(override.tax_category || vat.category)];
     const unit = text(override.unit_code) || (units[text(line.unit).toLowerCase()]||units[text(line.unit)]);
     const n = scaled(line.net_amount), t = scaled(line.vat_amount), g = scaled(line.gross_amount);
     const quantity = scaled(line.quantity,4), price = scaled(line.unit_price,2), rate = scaled(line.vat_rate,6);
@@ -99,8 +105,8 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
     if (category === 'S') require(rate === 50000n, `${label}.rate`, `Line ${i+1}: standard UAE VAT must be 5%.`);
     if (category && category !== 'S') {
       require(rate === 0n, `${label}.rate`, `Line ${i+1}: this tax category must have a zero rate.`);
-      require(!!text(override.tax_reason), `${label}.tax_reason`, `Line ${i+1}: record the reason for this tax treatment.`);
-      require(false, `${label}.tax_review`, `Line ${i+1}: ${category} treatment needs provider rule validation before activation.`);
+      require(nonVat || !!text(override.tax_reason), `${label}.tax_reason`, `Line ${i+1}: record the reason for this tax treatment.`);
+      if(category === 'E') require(['DL8.46.1','DL8.46.2','DL8.46.3','DL8.46.4'].includes(text(override.tax_reason_code)), `${label}.tax_reason_code`, `Line ${i+1}: choose a valid UAE VAT exemption code.`);
     }
     require([n,t,g].every(v => v !== null), `${label}.amounts`, `Line ${i+1}: invalid monetary value.`);
     if (n !== null && t !== null && g !== null) {
@@ -108,13 +114,13 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
       require(n + t === g, `${label}.total`, `Line ${i+1}: net plus VAT must equal the total.`);
       if (quantity !== null && price !== null) {
         const discount = scaled(line.discount_percent ?? 0,4);
-        require(discount === 0n, `${label}.discount`, `Line ${i+1}: discounts need explicit allowance mapping before activation.`);
-        if (discount === 0n) require(abs(n) === (abs(quantity) * price + 5000n) / 10000n, `${label}.net`, `Line ${i+1}: net does not reconcile with quantity and price.`);
+        require(discount !== null && discount >= 0n && discount <= 1000000n, `${label}.discount`, `Line ${i+1}: discount must be between 0 and 100%.`);
+        if (discount !== null && discount >= 0n && discount <= 1000000n) require(abs(n) === (abs(quantity) * price * (1000000n-discount) + 5000000000n) / 10000000000n, `${label}.net`, `Line ${i+1}: net does not reconcile with quantity and price.`);
       }
       if (rate !== null) require(abs(t) === (abs(n) * rate + 500000n) / 1000000n, `${label}.tax`, `Line ${i+1}: VAT does not reconcile with the tax rate.`);
       net += n; tax += t; gross += g;
     }
-    return { id: text(line.id), description: text(line.description), quantity: quantity === null ? '' : decimal(abs(quantity),4), unit: unit || '', unitPrice: price === null ? '' : decimal(price), taxCategory: category || '', taxReason: text(override.tax_reason), vatRate: rate === null ? '' : decimal(rate,6), net: decimal(abs(n || 0n)), tax: decimal(abs(t || 0n)), gross: decimal(abs(g || 0n)) };
+    return { id: text(line.id), description: text(line.description), quantity: quantity === null ? '' : decimal(abs(quantity),4), unit: unit || '', unitPrice: price === null ? '' : decimal(price), taxCategory: category || '', taxReason: nonVat ? 'Seller is not registered for VAT' : text(override.tax_reason), vatRate: rate === null ? '' : decimal(rate,6), net: decimal(abs(n || 0n)), tax: decimal(abs(t || 0n)), gross: decimal(abs(g || 0n)) };
   });
   require(scaled(d.subtotal) === net && scaled(d.tax_total) === tax && scaled(d.total) === gross, 'totals', 'Document totals must reconcile exactly with the rounded invoice lines.');
   require(credit ? gross < 0n : gross > 0n, 'total', 'The document amount has the wrong sign or is zero.');

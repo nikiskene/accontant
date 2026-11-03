@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "test:einvoicing": "node --experimental-strip-types --test tests/einvoicing.test.mjs tests/einvoicing-sql.test.mjs tests/docflow-sandbox.test.mjs tests/docflow-mapping.test.mjs tests/invoice-math.test.mjs",
+    "test:einvoicing": "node --experimental-strip-types --test tests/einvoicing.test.mjs tests/einvoicing-sql.test.mjs tests/docflow-sandbox.test.mjs tests/docflow-mapping.test.mjs tests/invoice-math.test.mjs tests/invoice-details.test.mjs",
     "test:receipt-ingestion": "node --experimental-strip-types --test tests/receipt-ingestion.test.mjs"
   },
   "dependencies": {

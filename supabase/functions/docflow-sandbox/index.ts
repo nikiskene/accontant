@@ -27,12 +27,13 @@ Deno.serve(async req=>{
    if(body.action==='disconnect'){check(await db.from('docflow_connections').delete().eq('workspace_id',workspace));return json({connected:false});}
    const companyId=String(body.company_id||''),accessToken=String(body.access_token||'').trim();
    if(!uuid.test(companyId)||!accessToken||accessToken.length>12000||/[\r\n]/.test(accessToken))return json({error:'Enter the company ID and sandbox access token issued by Docflow.'},400);
-   const settings=check(await db.from('einvoice_settings').select('tin,vat_registered').eq('workspace_id',workspace).single());
+   const settings=check(await db.from('einvoice_settings').select('tin,vat_registered,vat_status').eq('workspace_id',workspace).single());
    const profile=check(await db.from('company_legal_profiles').select('vat_number').eq('workspace_id',workspace).single());
-   const binding={workspaceId:workspace,providerCompanyId:companyId,tin:settings.tin,vatTrn:profile.vat_number,environment:'sandbox' as const};
+   if(!['registered','not_registered'].includes(settings.vat_status))return json({error:'Confirm company VAT status first.'},400);
+   const binding={workspaceId:workspace,providerCompanyId:companyId,tin:settings.tin,vatTrn:settings.vat_registered?profile.vat_number:null,vatRegistered:settings.vat_registered,environment:'sandbox' as const};
    const client=createDocFlowSandbox(binding,{getAccessToken:async()=>accessToken});await client.verifyCompany();
    const encrypted=await sealToken(accessToken,env('DOCFLOW_CREDENTIAL_ENCRYPTION_KEY'),`${workspace}:${companyId}`);
-   check(await db.from('docflow_connections').upsert({workspace_id:workspace,provider_company_id:companyId,tin:settings.tin,vat_trn:profile.vat_number,encrypted_access_token:encrypted,updated_by:user.id,updated_at:new Date().toISOString()}));
+   check(await db.from('docflow_connections').upsert({workspace_id:workspace,provider_company_id:companyId,tin:settings.tin,vat_trn:binding.vatTrn,vat_registered:binding.vatRegistered,encrypted_access_token:encrypted,updated_by:user.id,updated_at:new Date().toISOString()}));
    return json({connected:true,environment:'sandbox',productionEnabled:false});
   }
   if(body.action!=='validate')return json({error:'Unknown action.'},400);
@@ -44,7 +45,7 @@ Deno.serve(async req=>{
   if(!mapping.ready)return json({error:'Complete the invoice details before sandbox validation.',findings:mapping.findings},422);
   const last=check(await db.from('docflow_validations').select('created_at').eq('workspace_id',workspace).order('created_at',{ascending:false}).limit(1).maybeSingle());
   if(last&&Date.now()-Date.parse(last.created_at)<10000)return json({error:'Please wait a few seconds before validating again.'},429);
-  const binding={workspaceId:workspace,providerCompanyId:connection.provider_company_id,tin:connection.tin,vatTrn:connection.vat_trn,environment:'sandbox' as const};
+  const binding={workspaceId:workspace,providerCompanyId:connection.provider_company_id,tin:connection.tin,vatTrn:connection.vat_trn,vatRegistered:connection.vat_registered,environment:'sandbox' as const};
   const client=createDocFlowSandbox(binding,{getAccessToken:()=>openToken(connection.encrypted_access_token,env('DOCFLOW_CREDENTIAL_ENCRYPTION_KEY'),`${workspace}:${connection.provider_company_id}`)});
   const result=await client.validateCandidate(mapping.payload!);
   const record=check(await db.from('docflow_validations').insert({workspace_id:workspace,document_id:documentId,payload:mapping.payload,provider_response:result.providerResponse,validation_verified:result.validationVerified,created_by:user.id}).select('id').single());

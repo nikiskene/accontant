@@ -1,3 +1,5 @@
+> Extended on 3 November: [conditional fields, commercial/credit mapping and print controls](uae-invoice-acceptance-2026-11-03.md).
+
 # Required data for new UAE invoices
 
 Enabled from 2 November 2026 for newly created UAE invoices and credit notes. Historical documents and existing drafts keep their prior behavior; Austrian documents and quotes are outside this enforcement. Quotes converted into new UAE invoices acquire the requirement automatically.

@@ -1,4 +1,5 @@
 /** DocFlow JSON mapping. This builds a validation candidate, never submits it. */
+import {record} from './details.ts';
 import {prepare,scaled,decimal,text,type Context,type Row,type Finding} from './core.ts';
 export type DocFlowResult={payload:Row|null;findings:Finding[];ready:boolean;productionReady:false};
 const object=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
@@ -11,17 +12,17 @@ const emirates:Record<string,string>={dubai:'DXB',dxb:'DXB','abu dhabi':'AUH',au
 export const emirateCode=(v:unknown)=>emirates[text(v).toLowerCase()]||'';
 export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
  const prepared=prepare(context),p=prepared.payload;
+ const nonVat=p.seller.vatStatus==='not_registered';
+ const details=record(context.metadata.details);
  // Foreign currencies and non-standard taxes can be locally mapped, but not certified.
  // Unsupported financial/scenario inputs remain blocking findings.
- const mappingReviews=new Set(['currency_review']);
- const findings=prepared.findings.filter(f=>!mappingReviews.has(f.field)&&!/^lines\.\d+\.tax_review$/.test(f.field));
+ const findings=[...prepared.findings];
  const require=(ok:boolean,field:string,message:string)=>{if(!ok)findings.push({field,message});};
  require(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId),'providerCompanyId','Connect this company’s Docflow sandbox account.');
  require(p.seller.registrationType==='TL','seller.registrationType','This validation route currently supports trade-licence sellers. Other registration types require provider acceptance.');
- require(['10','30','42','58'].includes(p.paymentMeans),'payment_provider_contract','Card and direct-debit details need Docflow’s payment schema before validation.');
+ require(['10','30','49','54','55','68'].includes(p.paymentMeans),'payment_provider_contract','Choose a supported payment method and complete its required details.');
  require(!!p.number,'number','Issue the invoice to assign its final number before provider validation.');
- require(p.documentType==='invoice','credit_provider_contract','Credit-note reason codes and preceding-invoice JSON must be confirmed with Docflow before provider validation.');
- require(!!text(p.buyer.vatNumber),'buyer.vatNumber','Confirm the buyer VAT TRN for this tax-invoice route. Non-VAT buyers need the separate provider-approved identity route.');
+ require(p.buyer.scheme==='0235','buyer.scheme','Docflow’s published JSON guide currently accepts scheme 0235. Obtain provider confirmation for other foreign Peppol schemes.');
  const sellerRegion=emirateCode(p.seller.subdivision),buyerRegion=emirateCode(p.buyer.subdivision);
  require(!!sellerRegion,'seller.subdivision','Choose the seller emirate in Company credentials.');
  if(p.buyer.country==='AE')require(!!buyerRegion,'buyer.subdivision','Choose the customer emirate.');
@@ -44,23 +45,33 @@ export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
    if(group.reasonCode!==reasonCode||group.reason!==reason)throw new Error(`Line ${index+1}: tax reasons differ within the same VAT group. Review the tax treatment.`);
    group.net+=net;group.tax+=tax;taxGroups.set(key,group);
    const unitPrice=amount(line.unitPrice),unit=text(line.unit);
+   const quantity=scaled(line.quantity,4)!;
+   const allowance=(quantity*unitPrice+5000n)/10000n-net;
    return {lineNo:Number(source.line_no)||index+1,item:{name:text(override.item_name)||text(line.description),description:text(line.description)},quantity:Number(line.quantity),unitCode:unit,
     price:{grossPrice:money(unitPrice),priceDiscount:0,netPrice:money(unitPrice),baseQuantity:1,baseQuantityUnitCode:unit},
-    tax:{scheme:'VAT',categoryCode:category,rate:percent,...(reason?{exemptionReasonText:reason}:{}),...(reasonCode?{exemptionReasonCode:reasonCode}:{})},
+    ...(allowance>0n?{allowanceCharges:[{isCharge:false,amount:money(allowance),reason:'Line discount',reasonCode:'95'}]}:{}),
+    tax:{scheme:'VAT',categoryCode:category,...(!['E','O'].includes(category)?{rate:percent}:{}),...(reason?{exemptionReasonText:reason}:{}),...(reasonCode?{exemptionReasonCode:reasonCode}:{})},
     amounts:{lineExtensionAmount:money(net),taxAmount:money(tax),lineTotalAmount:money(gross),...(category!=='E'?{taxAmountAed:money(aed(tax,rate))}:{}),lineTotalAmountAed:money(aed(gross,rate))}};
   });
   const net=amount(p.totals.net),tax=amount(p.totals.tax),gross=amount(p.totals.gross);
   const bank=object(context.document.bank_snapshot),bankId=text(bank.iban||bank.account_number);
-  const transfer=['30','42','58'].includes(p.paymentMeans);
+  const transfer=p.paymentMeans==='30';
   if(transfer&&!bankId)throw new Error('Choose a company bank account on the invoice before validating bank-transfer payment instructions.');
-  const seller={registeredName:p.seller.name,electronicAddress:{id:p.seller.tin,schemeId:'0235'},taxIdentifier:{id:p.seller.vatNumber,schemeCode:'VAT'},taxRegistration:{id:p.seller.tin,schemeId:'TAX'},legalRegistration:{id:p.seller.registrationNumber,typeCode:p.seller.registrationType,authorityName:p.seller.authority},address:{line1:p.seller.address,city:p.seller.city,countrySubdivision:sellerRegion,countryCode:'AE'}};
-  const buyer={registeredName:p.buyer.name,electronicAddress:{id:p.buyer.electronicAddress,schemeId:p.buyer.scheme},taxIdentifier:{id:p.buyer.vatNumber,schemeCode:'VAT'},address:{line1:p.buyer.address,city:p.buyer.city,countrySubdivision:buyerRegion,countryCode:p.buyer.country}};
-  const payload:Row={companyId,isDraft:true,isSelfBilled:false,invoiceNo:p.number,documentId:p.documentId,issueDate:p.issueDate,invoiceTypeCode:'380',invoiceTransactionTypeCode:p.transactionType,currencyCode:p.currency,dueDate:p.dueDate,supplyDate:p.supplyDate,
+  const seller={registeredName:p.seller.name,electronicAddress:{id:p.seller.tin,schemeId:'0235'},...(!nonVat?{taxIdentifier:{id:p.seller.vatNumber,schemeCode:'VAT'}}:{}),taxRegistration:{id:p.seller.tin,schemeId:'TAX'},legalRegistration:{id:p.seller.registrationNumber,typeCode:p.seller.registrationType,authorityName:p.seller.authority},address:{line1:p.seller.address,city:p.seller.city,countrySubdivision:sellerRegion,countryCode:'AE'}};
+  const buyer={registeredName:p.buyer.name,electronicAddress:{id:p.buyer.electronicAddress,schemeId:p.buyer.scheme},...(p.buyer.vatNumber?{taxIdentifier:{id:p.buyer.vatNumber,schemeCode:'VAT'}}:{}),...(p.buyer.registrationNumber?{identifier:{id:p.buyer.registrationNumber},legalRegistration:{id:p.buyer.registrationNumber,typeCode:p.buyer.registrationType,...(p.buyer.authority?{authorityName:p.buyer.authority}:{}),...(p.buyer.passportCountry?{passportIssuingCountryCode:p.buyer.passportCountry}:{})}}:{}),address:{line1:p.buyer.address,city:p.buyer.city,countrySubdivision:p.buyer.country==='AE'?buyerRegion:text(p.buyer.subdivision),countryCode:p.buyer.country}};
+  const payload:Row={companyId,isDraft:true,isSelfBilled:false,invoiceNo:p.number,documentId:p.documentId,issueDate:p.issueDate,invoiceTypeCode:p.documentType==='credit_note'?(nonVat?'81':'381'):(nonVat?'480':'380'),invoiceTransactionTypeCode:p.transactionType,currencyCode:p.currency,dueDate:p.dueDate,supplyDate:p.supplyDate,
+   ...(p.documentType==='credit_note'?{precedingInvoice:{invoiceNo:p.precedingInvoice,...(context.preceding?.issue_date?{issueDate:context.preceding.issue_date}:{})},creditNoteReasonCode:details.credit_reason_code,creditNoteReasonText:p.creditReason}:{}),
+   ...(details.tax_point_date?{taxPointDate:details.tax_point_date}:{}),
+   ...(details.period_start||details.period_end||details.billing_frequency?{invoicePeriod:{...(details.period_start?{start:details.period_start}:{}),...(details.period_end?{end:details.period_end}:{}),...(details.billing_frequency?{billingFrequency:details.billing_frequency}:{})}}:{}),
+   ...(details.note?{note:details.note}:{}),
+   ...(Object.values(record(details.delivery)).some(Boolean)?{delivery:{address:{...record(details.delivery),...(record(details.delivery).countryCode==='AE'?{countrySubdivision:emirateCode(record(details.delivery).countrySubdivision)}:{})}}}:{}),
+   ...(details.beneficiary_id?{beneficialRecipient:{id:details.beneficiary_id}}:{}),
+   ...(text(context.document.terms_text)?{paymentTerms:[{note:context.document.terms_text}]}:{}),
    references:{...(reference?{buyerReference:reference}:{}),...(purchaseOrder?{purchaseOrder}:{})},seller,buyer,lines,
-   taxBreakdown:[...taxGroups.values()].map(group=>({scheme:'VAT',categoryCode:group.categoryCode,rate:group.rate,taxableAmount:money(group.net),taxAmount:money(group.tax),...(group.reason?{exemptionReasonText:group.reason}:{}),...(group.reasonCode?{exemptionReasonCode:group.reasonCode}:{})})),
+   taxBreakdown:[...taxGroups.values()].map(group=>({scheme:'VAT',categoryCode:group.categoryCode,...(!['E','O'].includes(group.categoryCode)?{rate:group.rate}:{}),taxableAmount:money(group.net),taxAmount:money(group.tax),...(group.reason?{exemptionReasonText:group.reason}:{}),...(group.reasonCode?{exemptionReasonCode:group.reasonCode}:{})})),
    totals:{lineExtensionTotal:money(net),allowanceTotal:0,chargeTotal:0,taxExclusiveAmount:money(net),taxTotal:money(tax),taxInclusiveAmount:money(gross),prepaidAmount:0,roundingAmount:0,payableAmount:money(gross)},
    ...(p.currency!=='AED'?{taxCurrency:{code:'AED',exchangeRate:Number(p.exchangeRate),taxTotal:money(aed(tax,rate)),taxInclusiveAmount:money(aed(gross,rate))}}:{}),
-   paymentInstructions:[{id:'PI-1',meansCode:p.paymentMeans,paymentId:p.number,...(transfer?{bankTransfer:{accountId:bankId,accountScheme:bank.iban?'IBAN':null,accountName:text(bank.account_name)||text(p.seller.name),bankIdentifier:text(bank.bic_swift),bankCountryCode:'AE'}}:{})}]};
+   paymentInstructions:[{id:'PI-1',meansCode:p.paymentMeans,paymentId:p.number,...(['54','55'].includes(p.paymentMeans)?{card:{lastFourDigits:details.card_last_digits}}:{}),...(p.paymentMeans==='49'?{directDebit:{mandateReference:details.mandate_reference}}:{}),...(transfer?{bankTransfer:{accountId:bankId,accountScheme:bank.iban?'IBAN':'LOCAL',accountName:text(bank.account_name)||text(p.seller.name),...(bank.bic_swift?{bic:text(bank.bic_swift)}:{})}}:{})}]};
   return {payload,findings:[],ready:true,productionReady:false};
  }catch(error){return {payload:null,findings:[{field:'mapping',message:error instanceof Error?error.message:'Invoice mapping failed.'}],ready:false,productionReady:false};}
 }

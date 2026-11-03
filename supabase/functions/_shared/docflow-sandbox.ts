@@ -8,7 +8,8 @@ export type DocFlowBinding = Readonly<{
   workspaceId: string;
   providerCompanyId: string;
   tin: string;
-  vatTrn: string;
+  vatTrn: string | null;
+  vatRegistered?: boolean;
   environment: 'sandbox';
 }>;
 type Dependencies = {
@@ -23,8 +24,8 @@ export class DocFlowSandboxError extends Error {
 }
 export function createDocFlowSandbox(binding: DocFlowBinding, dependencies: Dependencies) {
   // Copy and freeze so later caller mutations cannot change the credential scope.
-  const scope: DocFlowBinding = Object.freeze({...binding});
-  if(scope.environment!=='sandbox'||!uuid.test(scope.workspaceId)||!uuid.test(scope.providerCompanyId)||!/^\d{10}$/.test(scope.tin)||!/^\d{15}$/.test(scope.vatTrn)) throw new DocFlowSandboxError('invalid_binding');
+  const scope: DocFlowBinding = Object.freeze({...binding,vatRegistered:binding.vatRegistered ?? true});
+  if(scope.environment!=='sandbox'||!uuid.test(scope.workspaceId)||!uuid.test(scope.providerCompanyId)||!/^\d{10}$/.test(scope.tin)||(scope.vatRegistered ? !/^\d{15}$/.test(scope.vatTrn || '') : !!scope.vatTrn)) throw new DocFlowSandboxError('invalid_binding');
   const transport = dependencies.fetch || globalThis.fetch;
   async function request(path: string, body?: ObjectValue): Promise<ObjectValue> {
     const token=await dependencies.getAccessToken(scope);
@@ -49,7 +50,7 @@ export function createDocFlowSandbox(binding: DocFlowBinding, dependencies: Depe
     const envelope=await request(`/api/v1/companies/${scope.providerCompanyId}`);
     if(envelope.success!==true)throw new DocFlowSandboxError('company_lookup_failed');
     const company=object(envelope.data);
-    if(company.id!==scope.providerCompanyId||company.tin!==scope.tin||company.trn!==scope.vatTrn||company.isVATRegistered!==true||company.peppolParticipantId!==`0235:${scope.tin}`)throw new DocFlowSandboxError('company_identity_mismatch');
+    if(company.id!==scope.providerCompanyId||company.tin!==scope.tin||(scope.vatRegistered ? company.trn!==scope.vatTrn : !!company.trn)||company.isVATRegistered!==scope.vatRegistered||company.peppolParticipantId!==`0235:${scope.tin}`)throw new DocFlowSandboxError('company_identity_mismatch');
     // Numeric status meanings are not published. Identity match does not mean active.
     return {companyId:scope.providerCompanyId,tin:scope.tin,vatTrn:scope.vatTrn,identityMatched:true as const,activationVerified:false as const};
   }
@@ -57,7 +58,7 @@ export function createDocFlowSandbox(binding: DocFlowBinding, dependencies: Depe
     // Snapshot before any await; don't allow mutation between identity check and send.
     const body=structuredClone(candidate);
     const seller=object(body.seller);
-    if(body.companyId!==scope.providerCompanyId||object(seller.taxRegistration).id!==scope.tin||object(seller.taxIdentifier).id!==scope.vatTrn||object(seller.electronicAddress).id!==scope.tin||object(seller.electronicAddress).schemeId!=='0235')throw new DocFlowSandboxError('candidate_identity_mismatch');
+    if(body.companyId!==scope.providerCompanyId||object(seller.taxRegistration).id!==scope.tin||(scope.vatRegistered ? object(seller.taxIdentifier).id!==scope.vatTrn || !['380','381'].includes(String(body.invoiceTypeCode)) : !!object(seller.taxIdentifier).id || !['480','81'].includes(String(body.invoiceTypeCode)))||object(seller.electronicAddress).id!==scope.tin||object(seller.electronicAddress).schemeId!=='0235')throw new DocFlowSandboxError('candidate_identity_mismatch');
     await verifyCompany();
     const result=await request('/api/v1/invoices/validate',{...body,isDraft:true});
     // Observed on the live sandbox on 2026-11-02 for AED and USD synthetic invoices.
