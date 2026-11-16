@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {remapLineMetadata,printVisible} from '../src/features/einvoicing/details.ts';
-import {invoiceLineAmounts} from '../src/features/einvoicing/invoiceMath.ts';
+import {hasInvoiceLineValue,invoiceLineAmounts} from '../src/features/einvoicing/invoiceMath.ts';
 import {createSalesDocumentPdf} from '../src/utils/salesDocumentPdf.ts';
 test('reordered draft lines preserve custom units, categories, item names and reasons against new IDs',()=>{const lines=[{metadata:{unit_code:'HUR',tax_category:'zero',item_name:'Custom name'},tax_reason:'Export',tax_reason_code:''},{metadata:{unit_code:'DAY',extra:'retained'},tax_reason:'Reason',tax_reason_code:'DL8.46.1'}];const result=remapLineMetadata([lines[1],lines[0]],[{id:'new-a',line_no:2},{id:'new-b',line_no:1}]);assert.equal(result['new-a'].item_name,'Custom name');assert.equal(result['new-b'].unit_code,'DAY');assert.equal(result['new-b'].extra,'retained');});
 test('discount math reconciles on fractional quantities and rejects invalid percentages',()=>{assert.deepEqual(invoiceLineAmounts(2,100,0.05,10),{net:180,tax:9,gross:189});assert.deepEqual(invoiceLineAmounts(0.3333,19.99,0.05,12.5),{net:5.83,tax:0.29,gross:6.12});assert.throws(()=>invoiceLineAmounts(1,100,0.05,101));assert.throws(()=>invoiceLineAmounts(1,100,0.05,-1));});
@@ -13,4 +13,12 @@ test('a deduction mirrors a positive line, including fractional cent rounding', 
   assert.deepEqual(invoiceLineAmounts(-0.3333,19.99,0.05,12.5), {
     net:-positive.net, tax:-positive.tax, gross:-positive.gross,
   });
+});
+
+
+test('deduction import skips zero-value lines without dropping amounts that offset each other', () => {
+  const paidLine = {net_amount:20000, vat_amount:0, gross_amount:20000};
+  const zeroLine = {net_amount:'0.00', vat_amount:'0.00', gross_amount:'0.00'};
+  const offsetLine = {net_amount:1, vat_amount:-1, gross_amount:0};
+  assert.deepEqual([paidLine, zeroLine, offsetLine].filter(hasInvoiceLineValue), [paidLine, offsetLine]);
 });

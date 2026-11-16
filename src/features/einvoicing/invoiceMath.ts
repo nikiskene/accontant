@@ -8,3 +8,13 @@ export function invoiceLineAmounts(quantity:number,unitPrice:number,vatRate:numb
  const tax = sign * ((netMagnitude * r + 500000n) / 1000000n);
  return {net:Number(decimal(net)),tax:Number(decimal(tax)),gross:Number(decimal(net+tax))};
 }
+
+type InvoiceLineAmounts = {
+ net_amount: number | string;
+ vat_amount: number | string;
+ gross_amount: number | string;
+};
+
+export function hasInvoiceLineValue(line: InvoiceLineAmounts): boolean {
+ return Number(line.net_amount) !== 0 || Number(line.vat_amount) !== 0 || Number(line.gross_amount) !== 0;
+}

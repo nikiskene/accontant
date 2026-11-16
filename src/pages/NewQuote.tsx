@@ -6,7 +6,7 @@ import { ProductService } from '../lib/types';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
-import {invoiceLineAmounts} from '../features/einvoicing/invoiceMath';
+import {hasInvoiceLineValue,invoiceLineAmounts} from '../features/einvoicing/invoiceMath';
 import type {Row} from '../features/einvoicing/core';
 import {InvoiceDetailsFields} from '../features/einvoicing/InvoiceDetailsFields';
 import {record,remapLineMetadata} from '../features/einvoicing/details';
@@ -66,7 +66,7 @@ export function NewQuote(){
     const metadata = record(original.einvoice_data_snapshot?.metadata?.lines ?? fallbackMetadata.data?.lines);
     const cents = (amount: unknown) => Math.round(Number(amount)*100);
     const totals = {net:0,tax:0,gross:0};
-    const deductionLines: Line[] = originalLines.data.map(line => {
+    const deductionLines: Line[] = originalLines.data.filter(hasInvoiceLineValue).map(line => {
       const quantity = -Number(line.quantity);
       const unitPrice = Number(line.unit_price);
       const vatRate = Number(line.vat_rate);
