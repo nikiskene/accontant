@@ -23,3 +23,22 @@ test('card and direct-debit conditional fields are required before mapping',()=>
 test('E and O rates are omitted; exempt lines retain a validated UAE reason code',()=>{const c=fixture();Object.assign(c.document,{tax_total:0,total:100});Object.assign(c.lines[0],{vat_rate:0,vat_code:{category:'exempt'},vat_amount:0,gross_amount:100});c.metadata.lines={l1:{tax_reason:'Local passenger transport',tax_reason_code:'DL8.46.4'}};const r=mapDocFlow(c,provider);assert.deepEqual(r.findings,[]);assert.equal(r.payload.lines[0].tax.rate,undefined);assert.equal(r.payload.lines[0].amounts.taxAmountAed,undefined);assert.equal(r.payload.taxBreakdown[0].rate,undefined);});
 test('a UAE buyer explicitly not yet on e-invoicing uses the documented 98 route and a legal identifier',()=>{const c=commercial();c.customer.einvoice_profile.routing='uae_fallback';c.customer.einvoice_profile.tin='';c.customer.einvoice_profile.electronic_address='';c.customer.einvoice_profile.scheme='';const r=mapDocFlow(c,provider);assert.deepEqual(r.findings,[]);assert.equal(r.payload.buyer.electronicAddress.id,'9900000098');assert.equal(r.payload.buyer.identifier.id,'BUY-TL');assert.equal(r.payload.buyer.taxIdentifier,undefined);});
 test('seller corporate tax numbers cannot pass as VAT TRNs and seller TIN must start with one',()=>{for(const change of [c=>c.profile.vat_number='105048716200001',c=>c.settings.tin='9001234567']){const c=fixture();change(c);assert.equal(mapDocFlow(c,provider).ready,false);}});
+
+test('a previously invoiced deduction keeps its negative sign through VAT and AED conversion', () => {
+  const c = fixture();
+  c.document.currency = 'USD';
+  c.metadata.exchange_rate = '3.6725';
+  c.lines.push({...c.lines[0],id:'l2',line_no:2,quantity:-1,unit_price:30,net_amount:-30,vat_amount:-1.5,gross_amount:-31.5});
+  Object.assign(c.document,{subtotal:70,tax_total:3.5,total:73.5});
+  const result = mapDocFlow(c,provider);
+  assert.deepEqual(result.findings,[]);
+  const {lines,totals,taxBreakdown} = result.payload;
+  assert.equal(lines[1].quantity,-1);
+  assert.equal(lines[1].price.netPrice,30);
+  assert.equal(lines[1].amounts.taxAmountAed,-5.51);
+  assert.equal(lines[1].amounts.lineTotalAmountAed,-115.68);
+  assert.equal(totals.payableAmount,73.5);
+  assert.equal(taxBreakdown[0].taxableAmount,70);
+  c.lines[1].net_amount=30;
+  assert.ok(mapDocFlow(c,provider).findings.some(f=>f.field==='lines.2.sign'));
+});

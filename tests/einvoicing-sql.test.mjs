@@ -161,3 +161,58 @@ test('new Austrian invoices and quotes do not acquire UAE requirements',async()=
 test('a complete new non-VAT invoice issues and freezes its evidence without a provider connection',async()=>{const db=await database();try{await db.exec(await readinessSql());await db.exec(`alter table counterparties add column company_name text,add column street_address text,add column city text,add column country text;update counterparties set company_name='Buyer GmbH',street_address='Two Street',city='Vienna',country='AT',einvoice_profile='{"type":"business","registration_number":"FN123","registration_type":"foreign_business","routing":"export_fallback"}';update company_legal_profiles set state_region='DXB',trade_licence_number='TL-1',licensing_authority='DIEZ',tax_identification_number=null,vat_number=null,corporate_tax_number='105048716200001';`);await db.query('select save_einvoice_settings($1,$2::jsonb)',[w1,JSON.stringify({vat_status:'not_registered',tin:'1050487162'})]);const id='00000000-0000-0000-0000-000000000092';await db.exec(`insert into sales_documents(id,workspace_id,document_type,customer_id,issue_date,due_date,currency,status,subtotal,tax_total,total)values('${id}','${w1}','invoice','${customer}','2027-01-01','2027-01-15','AED','draft',100,0,100);insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit,unit_price,net_amount,vat_amount,gross_amount)values('${w1}','${id}',1,'Consulting',1,'hour',100,100,0,100);`);await db.query('select save_einvoice_metadata($1,$2::jsonb)',[id,JSON.stringify(commercialContext().metadata)]);assert.equal((await db.query('select einvoice_issue_readiness($1) as data',[id])).rows[0].data.ready,true);await db.query('select issue_sales_document($1)',[id]);const issued=(await db.query('select * from sales_documents where id=$1',[id])).rows[0];assert.equal(issued.status,'sent');assert.equal(issued.einvoice_data_snapshot.provider_validated,false);assert.equal(issued.issuer_snapshot.profile.vat_number,null);assert.equal(issued.issuer_snapshot.profile.corporate_tax_number,'105048716200001');await assert.rejects(db.query("update sales_documents set total=999 where id=$1",[id]),/frozen/);await assert.rejects(db.query("update sales_document_lines set description='Changed' where document_id=$1",[id]),/frozen/);await assert.rejects(db.query('select save_einvoice_metadata($1,$2::jsonb)',[id,'{}']),/frozen/);await db.query("update sales_documents set status='paid',amount_paid=100 where id=$1",[id]);assert.equal((await db.query('select status from sales_documents where id=$1',[id])).rows[0].status,'paid');}finally{await db.close();}});
 test('conditional scenario fields persist and cannot be bypassed with print preferences',async()=>{const db=await database();try{await db.exec(await readinessSql());const c=commercialContext();c.metadata.details={print_hidden:{buyer_reference:true,purchase_order:true}};let f=(await db.query('select check_uae_invoice_data($1::jsonb) as f',[JSON.stringify(c)])).rows[0].f;assert.ok(f.some(x=>x.field.startsWith('delivery.')));c.metadata.details.delivery={line1:'Two Street',city:'Vienna',countrySubdivision:'Vienna',countryCode:'AT'};f=(await db.query('select check_uae_invoice_data($1::jsonb) as f',[JSON.stringify(c)])).rows[0].f;assert.deepEqual(f,[]);await db.query('select save_einvoice_metadata($1,$2::jsonb)',[invoice,JSON.stringify(c.metadata)]);assert.deepEqual((await db.query('select details from einvoice_document_metadata where document_id=$1',[invoice])).rows[0].details,c.metadata.details);for(const change of [x=>{x.metadata.transaction_type='10000001';},x=>{x.metadata.transaction_type='00001001';},x=>{x.metadata.payment_means='54';},x=>{x.document.document_type='credit_note';x.metadata.credit_reason='Cancellation';},x=>{x.document.currency='USD';x.metadata.exchange_rate='3.1234567';}]){const v=structuredClone(c);change(v);assert.ok((await db.query('select check_uae_invoice_data($1::jsonb) as f',[JSON.stringify(v)])).rows[0].f.length>0);}}finally{await db.close();}});
 test('non-VAT connection cannot retain a VAT number or enable production',async()=>{const db=await database();try{await db.exec(await readinessSql());await db.query("insert into docflow_connections(workspace_id,provider_company_id,tin,vat_registered,vat_trn,encrypted_access_token)values($1,$2,'1050487162',false,null,'cipher')",[w1,customer]);await assert.rejects(db.exec("update docflow_connections set vat_trn='105048716200001'"),/check constraint/);await assert.rejects(db.exec("update docflow_connections set environment='production'"),/check constraint/);}finally{await db.close();}});
+
+test('database validates signed deductions and lets a credit note reverse a mixed invoice', async () => {
+  const db = await database();
+  try {
+    await db.exec(await readinessSql());
+    await db.exec(await readFile(new URL('../supabase/migrations/20261116120000_allow_invoice_deduction_lines.sql', import.meta.url), 'utf8'));
+    const c = commercialContext();
+    c.lines.push({...c.lines[0], id:'deduction', quantity:-1, unit_price:30, net_amount:-30, gross_amount:-30});
+    Object.assign(c.document, {subtotal:70,total:70});
+    const findings = async () => (await db.query('select check_uae_invoice_data($1::jsonb) as f',[JSON.stringify(c)])).rows[0].f;
+    assert.deepEqual(await findings(), []);
+    Object.assign(c.lines[1], {net_amount:30,gross_amount:30});
+    assert.ok((await findings()).some(f=>f.field==='lines.2.amounts'));
+
+    // Use a non-UAE workspace to exercise credit issuance without UAE metadata.
+    await db.query("update workspaces set country='AT' where id=$1",[w1]);
+    await db.query("insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit_price,net_amount,vat_amount,gross_amount) values($1,$2,2,'Deduction',-1,30,-30,-1.5,-31.5)",[w1,invoice]);
+    await db.query('update sales_documents set subtotal=70,tax_total=3.5,total=73.5 where id=$1',[invoice]);
+    await db.query('select issue_sales_document($1)',[invoice]);
+    const credit = (await db.query("select create_credit_note($1,1,'2027-02-01') as id",[invoice])).rows[0].id;
+    await db.query('select issue_sales_document($1)',[credit]);
+    const reversed = (await db.query('select quantity, gross_amount from sales_document_lines where document_id=$1 and line_no=2',[credit])).rows[0];
+    assert.equal(Number(reversed.quantity), 1);
+    assert.equal(Number(reversed.gross_amount), 31.5);
+  } finally {
+    await db.close();
+  }
+});
+
+test('linked deductions must match the source invoice scope and amounts at issuance', async () => {
+  const db = await database();
+  try {
+    await db.exec(await readinessSql());
+    await db.exec(await readFile(new URL('../supabase/migrations/20261116120000_allow_invoice_deduction_lines.sql', import.meta.url), 'utf8'));
+    await db.query("update workspaces set country='AT' where id=$1",[w1]);
+    await db.query('select issue_sales_document($1)',[invoice]);
+    const {id} = (await db.query(
+      "insert into sales_documents(workspace_id,document_type,customer_id,issue_date,currency,subtotal,tax_total,total) values($1,'invoice',$2,'2027-02-01','EUR',110,5.5,115.5) returning id",
+      [w1,customer],
+    )).rows[0];
+    await db.query(
+      "insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit_price,net_amount,vat_amount,gross_amount,deduction_invoice_id) values($1,$2,1,'Services',1,200,200,10,210,null),($1,$2,2,'Prior invoice',-1,90,-90,-4.5,-94.5,$3)",
+      [w1,id,invoice],
+    );
+    await assert.rejects(db.query('select issue_sales_document($1)',[id]), /same currency/);
+    await db.query("update sales_documents set currency='AED' where id=$1",[id]);
+    await assert.rejects(db.query('select issue_sales_document($1)',[id]), /earlier invoice totals/);
+    await db.query("update sales_document_lines set unit_price=100,net_amount=-100,vat_amount=-5,gross_amount=-105 where document_id=$1 and line_no=2",[id]);
+    await db.query("update sales_documents set subtotal=100,tax_total=5,total=105 where id=$1",[id]);
+    await db.query('select issue_sales_document($1)',[id]);
+    assert.equal((await db.query('select status from sales_documents where id=$1',[id])).rows[0].status,'sent');
+  } finally {
+    await db.close();
+  }
+});

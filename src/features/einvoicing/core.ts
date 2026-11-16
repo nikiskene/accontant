@@ -89,6 +89,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
   require(context.lines.length > 0, 'lines', 'Add at least one invoice line.');
   const overrides = obj(m.lines);
   let net = 0n, tax = 0n, gross = 0n;
+  const exchangeSign = credit ? -1n : 1n;
   const lines = context.lines.map((line, i) => {
     const label = `lines.${i + 1}`;
     const override = obj(overrides[text(line.id)]);
@@ -110,7 +111,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
     }
     require([n,t,g].every(v => v !== null), `${label}.amounts`, `Line ${i+1}: invalid monetary value.`);
     if (n !== null && t !== null && g !== null) {
-      require(credit ? n <= 0n && t <= 0n && g <= 0n : n >= 0n && t >= 0n && g >= 0n, `${label}.sign`, `Line ${i+1}: amounts have the wrong sign for this document.`);
+      require(quantity !== null && [n,t,g].every(value => quantity < 0n ? value <= 0n : value >= 0n), `${label}.sign`, `Line ${i+1}: amounts have the wrong sign for this document.`);
       require(n + t === g, `${label}.total`, `Line ${i+1}: net plus VAT must equal the total.`);
       if (quantity !== null && price !== null) {
         const discount = scaled(line.discount_percent ?? 0,4);
@@ -120,7 +121,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
       if (rate !== null) require(abs(t) === (abs(n) * rate + 500000n) / 1000000n, `${label}.tax`, `Line ${i+1}: VAT does not reconcile with the tax rate.`);
       net += n; tax += t; gross += g;
     }
-    return { id: text(line.id), description: text(line.description), quantity: quantity === null ? '' : decimal(abs(quantity),4), unit: unit || '', unitPrice: price === null ? '' : decimal(price), taxCategory: category || '', taxReason: nonVat ? 'Seller is not registered for VAT' : text(override.tax_reason), vatRate: rate === null ? '' : decimal(rate,6), net: decimal(abs(n || 0n)), tax: decimal(abs(t || 0n)), gross: decimal(abs(g || 0n)) };
+    return { id: text(line.id), description: text(line.description), quantity: quantity === null ? '' : decimal(exchangeSign * (quantity),4), unit: unit || '', unitPrice: price === null ? '' : decimal(price), taxCategory: category || '', taxReason: nonVat ? 'Seller is not registered for VAT' : text(override.tax_reason), vatRate: rate === null ? '' : decimal(rate,6), net: decimal(exchangeSign * (n || 0n)), tax: decimal(exchangeSign * (t || 0n)), gross: decimal(exchangeSign * (g || 0n)) };
   });
   require(scaled(d.subtotal) === net && scaled(d.tax_total) === tax && scaled(d.total) === gross, 'totals', 'Document totals must reconcile exactly with the rounded invoice lines.');
   require(credit ? gross < 0n : gross > 0n, 'total', 'The document amount has the wrong sign or is zero.');
@@ -133,7 +134,7 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
     require(!!text(m.credit_reason), 'credit_reason', 'Record the reason for the credit note.');
   }
   require(text(settings.mode) === 'preparation', 'mode', 'Provider activation has not been implemented in this preparation release.');
-  const payload: Preparation = {version:'samly-uae-1',workspaceId:text(workspace.id),documentId:text(d.id),documentType:credit?'credit_note':'invoice',number:text(d.document_number),issueDate:text(d.issue_date),currency:text(d.currency),dueDate:text(d.due_date),seller,buyer:buyerData,paymentMeans:text(m.payment_means),transactionType:text(m.transaction_type),supplyDate:text(m.supply_date || d.service_date),precedingInvoice:text(context.preceding?.document_number),creditReason:text(m.credit_reason),exchangeRate:exchangeRate === null ? '' : decimal(exchangeRate,8),taxCurrency:'AED',taxTotalAED:exchangeRate === null || exchangeRate <= 0n ? '' : decimal((abs(tax)*exchangeRate+50000000n)/100000000n),lines,totals:{net:decimal(abs(net)),tax:decimal(abs(tax)),gross:decimal(abs(gross)),paid:decimal(paid),payable:decimal(credit?abs(gross):gross-paid)}};
+  const payload: Preparation = {version:'samly-uae-1',workspaceId:text(workspace.id),documentId:text(d.id),documentType:credit?'credit_note':'invoice',number:text(d.document_number),issueDate:text(d.issue_date),currency:text(d.currency),dueDate:text(d.due_date),seller,buyer:buyerData,paymentMeans:text(m.payment_means),transactionType:text(m.transaction_type),supplyDate:text(m.supply_date || d.service_date),precedingInvoice:text(context.preceding?.document_number),creditReason:text(m.credit_reason),exchangeRate:exchangeRate === null ? '' : decimal(exchangeRate,8),taxCurrency:'AED',taxTotalAED:exchangeRate === null || exchangeRate <= 0n ? '' : decimal(exchangeSign * (tax < 0n ? -1n : 1n) * ((abs(tax)*exchangeRate+50000000n)/100000000n)),lines,totals:{net:decimal(exchangeSign * (net)),tax:decimal(exchangeSign * (tax)),gross:decimal(exchangeSign * (gross)),paid:decimal(paid),payable:decimal(credit?abs(gross):gross-paid)}};
   return {payload,findings,ready:findings.length === 0};
 }
 

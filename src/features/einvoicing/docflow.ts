@@ -7,7 +7,7 @@ const abs=(n:bigint)=>n<0n?-n:n;
 const amount=(v:unknown)=>{const value=scaled(v);if(value===null)throw new Error('Invalid monetary amount');return value;};
 // Money remains integer cents until the final JSON serialization boundary.
 const money=(v:bigint)=>{if(abs(v)>9007199254740991n)throw new Error('Amount exceeds JSON precision');return Number(decimal(v));};
-const aed=(cents:bigint,rate:bigint)=>(cents*rate+50000000n)/100000000n;
+const aed=(cents:bigint,rate:bigint)=>(cents<0n?-1n:1n)*((abs(cents)*rate+50000000n)/100000000n);
 const emirates:Record<string,string>={dubai:'DXB',dxb:'DXB','abu dhabi':'AUH',auh:'AUH',sharjah:'SHJ',shj:'SHJ',ajman:'AJM',ajm:'AJM','ras al khaimah':'RAK',rak:'RAK',fujairah:'FUJ',fuj:'FUJ','umm al quwain':'UAQ',uaq:'UAQ'};
 export const emirateCode=(v:unknown)=>emirates[text(v).toLowerCase()]||'';
 export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
@@ -46,10 +46,11 @@ export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
    group.net+=net;group.tax+=tax;taxGroups.set(key,group);
    const unitPrice=amount(line.unitPrice),unit=text(line.unit);
    const quantity=scaled(line.quantity,4)!;
-   const allowance=(quantity*unitPrice+5000n)/10000n-net;
+   const undiscounted = (quantity < 0n ? -1n : 1n) * ((abs(quantity) * unitPrice + 5000n) / 10000n);
+   const adjustment = net - undiscounted;
    return {lineNo:Number(source.line_no)||index+1,item:{name:text(override.item_name)||text(line.description),description:text(line.description)},quantity:Number(line.quantity),unitCode:unit,
     price:{grossPrice:money(unitPrice),priceDiscount:0,netPrice:money(unitPrice),baseQuantity:1,baseQuantityUnitCode:unit},
-    ...(allowance>0n?{allowanceCharges:[{isCharge:false,amount:money(allowance),reason:'Line discount',reasonCode:'95'}]}:{}),
+    ...(adjustment!==0n?{allowanceCharges:[{isCharge:adjustment>0n,amount:money(abs(adjustment)),reason:adjustment>0n?'Reversal of line discount':'Line discount',...(adjustment<0n?{reasonCode:'95'}:{})}]}:{}),
     tax:{scheme:'VAT',categoryCode:category,...(!['E','O'].includes(category)?{rate:percent}:{}),...(reason?{exemptionReasonText:reason}:{}),...(reasonCode?{exemptionReasonCode:reasonCode}:{})},
     amounts:{lineExtensionAmount:money(net),taxAmount:money(tax),lineTotalAmount:money(gross),...(category!=='E'?{taxAmountAed:money(aed(tax,rate))}:{}),lineTotalAmountAed:money(aed(gross,rate))}};
   });
