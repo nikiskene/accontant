@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { invoiceBankDetails } from './invoiceBankDetails.ts';
 import {printVisible,record} from '../features/einvoicing/details.ts';
 
 export type SalesPdfDocument = {
@@ -88,6 +89,10 @@ export function createSalesDocumentPdf(document: SalesPdfDocument, lines: SalesP
   const customer=document.customer_snapshot || document.customer || {};
   const pdf=new jsPDF(), font=template.font_family || 'helvetica', currency=document.currency;
   pdf.setFont(font);pdf.setFontSize(10);
+  if (template.accent_color && /^#[0-9a-f]{6}$/i.test(template.accent_color)) {
+    pdf.setFillColor(template.accent_color);
+    pdf.rect(14,10,182,2,'F');
+  }
   const de=template.language_code==='de';
   const label=document.document_type==='credit_note'?(de?'GUTSCHRIFT':nonVat?'CREDIT NOTE':'TAX CREDIT NOTE'):(de?'RECHNUNG':nonVat?'INVOICE':'TAX INVOICE');
   pdf.setFontSize(19);pdf.text(label,196,21,{align:'right'});
@@ -102,18 +107,52 @@ export function createSalesDocumentPdf(document: SalesPdfDocument, lines: SalesP
   pdf.setFont(font,'bold');pdf.text(de?'Rechnung an':'Bill to',14,y);pdf.setFont(font,'normal');y+=6;
   const buyerIdentity={...record(customer.einvoice_profile),...record(metadata.buyer)};
   const buyerLines=[customer.company_name||customer.name||customer.alias||'Customer',customer.street_address,[customer.zip,customer.city].filter(Boolean).join(' '),[customer.state,customer.country].filter(Boolean).join(', '),...(customer.vat_trn?[`VAT TRN: ${customer.vat_trn}`]:[]),...(nonVat&&buyerIdentity.registration_number?[`Registration: ${buyerIdentity.registration_number}`]:[])].filter(Boolean);
-  for(const line of buyerLines){const wrapped=pdf.splitTextToSize(String(line),182);pdf.text(wrapped,14,y);y+=wrapped.length*5;}
-  const note=(label:string,value:unknown)=>{if(!value)return;const wrapped=pdf.splitTextToSize(`${label}: ${String(value)}`,182);if(y+wrapped.length*5>270){pdf.addPage();y=20;}pdf.setFontSize(9);pdf.text(wrapped,14,y);y+=wrapped.length*5+2;};
-  y+=3;
-  note(de?'Leistungsdatum':'Supply date',metadata.supply_date||document.service_date);
-  if(metadata.supply_date&&document.service_date)note(de?'Leistungszeitraum':'Service period',document.service_date);
-  note(de?'Betreff':'Reference',document.header_text);
-  if(printVisible(details,'buyer_reference'))note('Buyer reference',metadata.buyer_reference);
-  if(printVisible(details,'purchase_order'))note('Purchase order',metadata.purchase_order);
-  if(printVisible(details,'transaction_type'))note('Transaction classification',metadata.transaction_type);
-  note('VAT point date',details.tax_point_date);
-  if(details.period_start||details.period_end)note('Supply period',`${details.period_start||''} - ${details.period_end||''}`);
-  if(document.document_type==='credit_note')note('Credit reason',metadata.credit_reason);
+  const addressY = y;
+  const detailsRows: [string, unknown][] = [
+    [de?'Leistungsdatum':'Supply date', metadata.supply_date || document.service_date],
+    [de?'Leistungszeitraum':'Service period', metadata.supply_date && document.service_date],
+    [de?'Betreff':'Reference', document.header_text],
+    ['Buyer reference', printVisible(details,'buyer_reference') && metadata.buyer_reference],
+    ['Purchase order', printVisible(details,'purchase_order') && metadata.purchase_order],
+    ['Transaction classification', printVisible(details,'transaction_type') && metadata.transaction_type],
+    ['VAT point date', details.tax_point_date],
+    ['Supply period', (details.period_start || details.period_end) && `${details.period_start||''} - ${details.period_end||''}`],
+    ['Credit reason', document.document_type==='credit_note' && metadata.credit_reason],
+  ];
+  const left = buyerLines.flatMap(line => pdf.splitTextToSize(String(line),86) as string[]);
+  const right = [['',''], ...detailsRows.filter(([,value]) => !!value)
+    .map(([name,value]) => [`${name}:`,String(value)])];
+  const addressAndDetails = Array.from({length:Math.max(left.length,right.length)}, (_,i) => [
+    left[i] || '', right[i]?.[0] || '', right[i]?.[1] || '',
+  ]);
+  autoTable(pdf, {
+    startY: addressY - 3.5, theme:'plain', body:addressAndDetails,
+    margin:{left:14,right:14,bottom:23,top:16},
+    styles:{font,fontSize:9,cellPadding:{top:0.5,bottom:0.5,left:0,right:4}},
+    columnStyles:{0:{cellWidth:90},1:{cellWidth:41},2:{cellWidth:51}},
+    didParseCell: ({column, row, cell}) => {
+      if (column.index === 0 || row.index === 0 || row.index >= right.length) return;
+      cell.styles.fillColor = [245, 245, 245];
+      cell.styles.cellPadding = {
+        top: row.index === 1 ? 2 : 0.5,
+        bottom: row.index === right.length - 1 ? 2 : 0.5,
+        left: column.index === 1 ? 4 : 0,
+        right: column.index === 1 ? 1 : 4,
+      };
+    },
+  });
+  y = (pdf as any).lastAutoTable.finalY + 2;
+  const note = (name:string,value:unknown) => {
+    if (!value) return;
+    pdf.setFontSize(9);
+    const wrapped = pdf.splitTextToSize(`${name}: ${String(value)}`,182) as string[];
+    for (const line of wrapped) {
+      if (y>270) { pdf.addPage(); y=20; }
+      pdf.text(line,14,y);
+      y+=4.5;
+    }
+    y+=1;
+  };
   const hasDiscount=lines.some(line=>Number((line as SalesPdfLine & {discount_percent?:number}).discount_percent)>0);
   autoTable(pdf,{startY:y+3,margin:{left:14,right:14,bottom:23},styles:{font,fontSize:9,cellPadding:3},head:[[de?'Beschreibung':'Description',de?'Menge':'Qty',de?'Einzelpreis':'Unit price',...(hasDiscount?['Discount']:[]),de?'USt.':'VAT',de?'Gesamt':'Total']],body:lines.map(line=>{const extra=line as SalesPdfLine & {unit?:string;discount_percent?:number;vat_rate?:number};return [line.description,`${line.quantity} ${extra.unit||''}`,`${currency} ${Number(line.unit_price).toFixed(2)}`,...(hasDiscount?[`${extra.discount_percent||0}%`]:[]),`${Number(line.vat_amount).toFixed(2)}${!nonVat&&extra.vat_rate!=null?` (${Number(extra.vat_rate)*100}%)`:''}`,Number(line.gross_amount).toFixed(2)];})});
   y=(pdf as any).lastAutoTable.finalY+9;
@@ -124,9 +163,20 @@ export function createSalesDocumentPdf(document: SalesPdfDocument, lines: SalesP
   if(nonVat)note('VAT status','Seller is not registered for VAT. No VAT charged.');
   if(currency!=='AED'&&metadata.exchange_rate){const rate=Number(metadata.exchange_rate);note('Exchange rate',`1 ${currency} = ${metadata.exchange_rate} AED`);note('VAT in AED',(Number(document.tax_total)*rate).toFixed(2));}
   for(const reason of [...new Set(Object.values(record(metadata.lines)).map(value=>String(record(value).tax_reason||'')).filter(Boolean))])note('Tax treatment',reason);
-  const bank=record(document.bank_snapshot);
-  if(metadata.payment_means==='30'){note('Account holder',bank.account_name);note(bank.iban?'IBAN':'Account number',bank.iban||bank.account_number);note('SWIFT / BIC',bank.bic_swift);}
-  note('Payment instructions',template.payment_instructions);
+  const bankDetails = invoiceBankDetails(template.payment_instructions || '', metadata.payment_means==='30' ? document.bank_snapshot : null);
+  if (bankDetails.accounts.length || bankDetails.intro.length) {
+    const rows: {content:string;colSpan?:number}[][] = [];
+    if (bankDetails.intro.length) rows.push([{content:bankDetails.intro.join('\n'),colSpan:2}]);
+    for (let i = 0; i < bankDetails.accounts.length; i+=2) {
+      rows.push([{content:bankDetails.accounts[i].join('\n')},{content:bankDetails.accounts[i+1]?.join('\n') || ''}]);
+    }
+    autoTable(pdf,{
+      startY:y+2,theme:'plain',body:rows,margin:{left:14,right:14,bottom:23,top:16},
+      styles:{font,fontSize:Number(template.payment_instructions_font_size || 9),cellPadding:{top:1,bottom:1,left:0,right:4}},
+      columnStyles:{0:{cellWidth:95},1:{cellWidth:87}},
+    });
+    y = (pdf as any).lastAutoTable.finalY + 5;
+  }
   note(de?'Zahlungsbedingungen':'Payment terms',document.terms_text);
   if(template.footer_text)for(let page=1;page<=pdf.getNumberOfPages();page++){pdf.setPage(page);pdf.setFontSize(8);pdf.setTextColor(100);pdf.text(pdf.splitTextToSize(template.footer_text,180).slice(0,2),105,285,{align:'center'});pdf.setTextColor(0);}
   return pdf;

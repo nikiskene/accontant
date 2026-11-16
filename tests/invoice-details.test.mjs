@@ -22,3 +22,23 @@ test('deduction import skips zero-value lines without dropping amounts that offs
   const offsetLine = {net_amount:1, vat_amount:-1, gross_amount:0};
   assert.deepEqual([paidLine, zeroLine, offsetLine].filter(hasInvoiceLineValue), [paidLine, offsetLine]);
 });
+
+test('bank transfer PDF prints a matching template account once and keeps a second account', () => {
+  const d = doc();
+  d.einvoice_data_snapshot.metadata.payment_means = '30';
+  d.bank_snapshot = {
+    bank_name:'Mashreq Bank',
+    account_name:'Synthetic Seller LLC',
+    iban:'AE070331234567890123456',
+    account_number:'0001234567',
+    bic_swift:'TESTAEAD',
+  };
+  const template = {payment_instructions:'EUR:\nIBAN: AT00 0000 0000 0000 0000\n\nAED/USD:\nBank Name: Mashreq Bank\nIBAN: AE07 0331 2345 6789 0123 456'};
+  const pdf = createSalesDocumentPdf(d,[{description:'Consulting',quantity:1,unit_price:100,vat_amount:0,gross_amount:100}],'Seller',template).output();
+  assert.equal(pdf.match(/Mashreq Bank/g)?.length,1);
+  assert.ok(pdf.indexOf('AED/USD:') >= 0 && pdf.indexOf('AED/USD:') < pdf.indexOf('EUR:'));
+  assert.equal(pdf.match(/0001234567/g)?.length,1);
+  assert.ok(pdf.includes('AT00 0000 0000 0000 0000'));
+  assert.ok(pdf.includes('AE07 0331 2345 6789 0123 456'));
+  assert.ok(!pdf.includes(d.bank_snapshot.iban));
+});

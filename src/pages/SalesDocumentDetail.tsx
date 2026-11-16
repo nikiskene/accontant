@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Modal } from '../components/Modal';
+import { loadDocumentLogo } from '../utils/documentLogo';
 import { createSalesDocumentPdf, pdfBase64, type SalesPdfTemplate } from '../utils/salesDocumentPdf';
 
 type Doc={id:string;workspace_id:string;template_id:string|null;document_type:string;document_number:string|null;issue_date:string;due_date:string|null;service_date:string|null;status:string;currency:string;subtotal:number;tax_total:number;total:number;amount_paid:number;header_text:string|null;terms_text:string|null;correction_pending_resend:boolean;revision_number:number;issuer_snapshot:any;customer_snapshot:any;customer:any;einvoice_data_snapshot?:any;einvoice_metadata?:any;bank_snapshot?:any};
@@ -25,7 +26,16 @@ export function SalesDocumentDetail({id}:{id:string}) {
   const rpc=async(name:string,args:any)=>{const{error}=await supabase.rpc(name,args);if(error)setMsg(error.message);else{setMsg('Saved.');void load()}};
   const convert=()=>rpc('convert_quote_to_invoice',{p_quote_id:id,p_fraction:Number(fraction)/100,p_issue_date:new Date().toISOString().slice(0,10),p_due_date:null});
   const createCredit=async()=>{const input=prompt('Percentage of the original invoice to credit (1–100)', '100');if(input===null)return;const percentage=Number(input);if(!Number.isFinite(percentage)||percentage<=0||percentage>100){setMsg('Enter a percentage greater than 0 and no more than 100.');return;}const{data,error}=await supabase.rpc('create_credit_note',{p_invoice_id:id,p_fraction:percentage/100,p_issue_date:new Date().toISOString().slice(0,10)});if(error){setMsg(error.message);return;}window.history.pushState({},'',`/sales-documents/${data}`);window.dispatchEvent(new PopStateEvent('popstate'));};
-  const makePdf=async()=>{if(!doc)return null;let logo_data_url:string|undefined;if(template.logo_path){const{data}=await supabase.storage.from('finance-documents').createSignedUrl(template.logo_path,60);if(data?.signedUrl){const blob=await fetch(data.signedUrl).then(response=>response.blob());logo_data_url=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.readAsDataURL(blob)})}}return createSalesDocumentPdf(doc,lines,workspace?.legal_name||'Company',{...template,logo_data_url})};
+  const makePdf=async()=>{
+    if(!doc)return null;
+    try {
+      const logo_data_url=await loadDocumentLogo(template.logo_path);
+      return createSalesDocumentPdf(doc,lines,workspace?.legal_name||'Company',{...template,logo_data_url});
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : 'The PDF could not be generated.');
+      return null;
+    }
+  };
   const download=async()=>{const pdf=await makePdf();pdf?.save(`${doc?.document_number||'draft'}.pdf`)};
   const openComposer=()=>{if(!doc)return;const customer=doc.customer||doc.customer_snapshot||{};const kind=doc.document_type==='quote'?'Cost estimate':doc.document_type==='credit_note'?'Credit note':'Invoice';const corrected=doc.document_type==='invoice'&&doc.correction_pending_resend;const name=customer.company_name||customer.alias||'Customer';setEmail({to:customer.email||'',cc:'',bcc:doc.document_type==='invoice'?'ns@iacy.com':'',subject:`${corrected?'Corrected ':''}${kind} ${doc.document_number||''}`,body:`Dear ${name},\n\nPlease find ${corrected?'the corrected ':''}${kind.toLowerCase()} ${doc.document_number||''} attached.\n\nTotal: ${doc.currency} ${Number(doc.total).toFixed(2)}\n\nKind regards,\nIACy`});setComposeOpen(true)};
   useEffect(()=>{if(!doc||new URLSearchParams(window.location.search).get('compose')!=='1')return;window.history.replaceState({},'',window.location.pathname);openComposer()},[doc?.id]);
