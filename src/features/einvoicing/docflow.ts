@@ -1,5 +1,5 @@
 /** DocFlow JSON mapping. This builds a validation candidate, never submits it. */
-import {record} from './details.ts';
+import {invoiceCountryCode, record} from './details.ts';
 import {prepare,scaled,decimal,text,type Context,type Row,type Finding} from './core.ts';
 export type DocFlowResult={payload:Row|null;findings:Finding[];ready:boolean;productionReady:false};
 const object=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
@@ -65,7 +65,7 @@ export function mapDocFlow(context:Context,companyId:string):DocFlowResult {
    ...(details.tax_point_date?{taxPointDate:details.tax_point_date}:{}),
    ...(details.period_start||details.period_end||details.billing_frequency?{invoicePeriod:{...(details.period_start?{start:details.period_start}:{}),...(details.period_end?{end:details.period_end}:{}),...(details.billing_frequency?{billingFrequency:details.billing_frequency}:{})}}:{}),
    ...(details.note?{note:details.note}:{}),
-   ...(Object.values(record(details.delivery)).some(Boolean)?{delivery:{address:{...record(details.delivery),...(record(details.delivery).countryCode==='AE'?{countrySubdivision:emirateCode(record(details.delivery).countrySubdivision)}:{})}}}:{}),
+   ...(Object.values(record(details.delivery)).some(Boolean)?{delivery:{address:{...record(details.delivery),countryCode:invoiceCountryCode(record(details.delivery).countryCode),...(invoiceCountryCode(record(details.delivery).countryCode)==='AE'?{countrySubdivision:emirateCode(record(details.delivery).countrySubdivision)}:{})}}}:{}),
    ...(details.beneficiary_id?{beneficialRecipient:{id:details.beneficiary_id}}:{}),
    ...(text(context.document.terms_text)?{paymentTerms:[{note:context.document.terms_text}]}:{}),
    references:{...(reference?{buyerReference:reference}:{}),...(purchaseOrder?{purchaseOrder}:{})},seller,buyer,lines,

@@ -1,3 +1,4 @@
+import { invoiceCountryCode } from '../features/einvoicing/details';
 import {InvoiceDetailsFields} from '../features/einvoicing/InvoiceDetailsFields';
 import {DocFlowConnection} from '../features/einvoicing/DocFlowConnection';
 import {mapDocFlow} from '../features/einvoicing/docflow';
@@ -57,7 +58,11 @@ function CompanyEInvoicing() {
       if(cancelled)return;
       if(error||!data){setMessage(error?.message||'Could not load invoice.');return;}
       if(data.workspace.id!==workspaceId){setMessage('Select an invoice belonging to the current company.');return;}
-      setContext(data as Context);setMetadata({...initialMetadata,...data.metadata,buyer:{...initialMetadata.buyer,...(data.document.status==='draft'?data.customer?.einvoice_profile:data.document.customer_snapshot?.einvoice_profile),...Object.fromEntries(Object.entries(data.metadata?.buyer||{}).filter(([,value])=>text(value)!==''))},lines:data.metadata?.lines||{}});setMessage('');
+      const savedBuyer = data.metadata?.buyer || {};
+      const customer = data.document.status==='draft' && !(data.document.document_type==='credit_note' && data.document.issuer_snapshot)
+        ? data.customer : data.document.customer_snapshot;
+      const country = invoiceCountryCode(text(savedBuyer.country) || text(customer?.einvoice_profile?.country) || customer?.country);
+      setContext(data as Context);setMetadata({...initialMetadata,...data.metadata,buyer:{...initialMetadata.buyer,...customer?.einvoice_profile,...Object.fromEntries(Object.entries(savedBuyer).filter(([,value])=>text(value)!=='')),country:/^[A-Z]{2}$/.test(country)?country:text(savedBuyer.country)},lines:data.metadata?.lines||{}});setMessage('');
     });
     return()=>{cancelled=true;};
   },[documentId,workspaceId,available]);
@@ -72,7 +77,7 @@ function CompanyEInvoicing() {
   };
   const saveMetadata=async()=>{
     if(!context)return;setSaving(true);setMessage('');
-    const {error}=await supabase.rpc('save_einvoice_metadata',{p_document_id:context.document.id,p_metadata:metadata});setSaving(false);setMessage(error?.message||'Electronic invoice details saved. Nothing has been submitted.');
+    const {error}=await supabase.rpc('save_einvoice_metadata',{p_document_id:context.document.id,p_metadata:metadata});setSaving(false);setMessage(error?.message||'Electronic invoice details saved.');
   };
   const more=async()=>{
     if(!workspaceId)return;setLoading(true);
@@ -109,7 +114,7 @@ function CompanyEInvoicing() {
         {context&&<><p className="text-sm text-gray-600">Issued documents are checked against their frozen company and customer details. These preparation fields do not rewrite the invoice.</p>{metadataLocked&&<p className="text-sm text-blue-900">These required details were frozen when the invoice was issued. Use a linked credit note to correct an issued invoice.</p>}<fieldset disabled={metadataLocked} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Customer type" value={text(buyer.type)} onChange={e=>updateBuyer('type',e.target.value)}><option value="">Confirm customer type</option><option value="business">Business</option><option value="consumer">Consumer — scope review</option></Select>
-            <Input label="Customer country code" maxLength={2} placeholder="AE" value={text(buyer.country)} onChange={e=>updateBuyer('country',e.target.value.toUpperCase())}/>
+            <Input label="Buyer country code" maxLength={2} placeholder="AE" value={text(buyer.country)} onChange={e=>updateBuyer('country',e.target.value.toUpperCase())}/>
             <Input label="Customer TIN" value={text(buyer.tin)} onChange={e=>updateBuyer('tin',e.target.value)}/>
             <Input label="Customer electronic address" value={text(buyer.electronic_address)} onChange={e=>updateBuyer('electronic_address',e.target.value)}/>
             <Input label="Electronic address scheme" placeholder="0235 for UAE TIN" value={text(buyer.scheme)} onChange={e=>updateBuyer('scheme',e.target.value)}/>

@@ -1,5 +1,5 @@
 /** Provider-neutral preparation. Passing these checks is NOT PINT-AE certification. */
-import {conditionalFindings} from './details.ts';
+import {conditionalFindings, invoiceCountryCode} from './details.ts';
 export type Row = Record<string, unknown>;
 export type Finding = { field: string; message: string };
 export type Preparation = {
@@ -57,10 +57,11 @@ export function prepare(context: Context): { payload: Preparation; findings: Fin
   if(settings.vat_registered===true)require(/^1\d{12}03$/.test(text(profile.vat_number)), 'seller.vat_number', 'Enter the seller’s 15-digit VAT TRN.');
   const seller: Row = { name: issued ? text(issuer.legal_name) : text(workspace.legal_name), tin: text(settings.tin), vatNumber: text(profile.vat_number), vatStatus: nonVat?'not_registered':'registered', registrationNumber: text(profile.trade_licence_number), registrationType: text(settings.registration_type) || 'TL', authority: text(profile.licensing_authority), address: text(profile.address_line_1), city: text(profile.city), subdivision: text(profile.state_region), country: 'AE' };
   for (const field of ['name','registrationNumber','authority','address','city','subdivision']) require(!!seller[field], `seller.${field}`, `Complete the seller’s ${field === 'registrationNumber' ? 'trade licence number' : field} in Company credentials.`);
-  const buyerData: Row = { name: text(customer.company_name || customer.name || customer.alias), address: text(customer.street_address), city: text(customer.city), subdivision: text(customer.state), country: text(buyer.country || customer.country).toUpperCase(), vatNumber: text(customer.vat_trn), tin: text(buyer.tin), electronicAddress: buyer.routing === 'uae_fallback' && text(buyer.country || customer.country).toUpperCase() === 'AE' ? '9900000098' : buyer.routing === 'export_fallback' && text(buyer.country || customer.country).toUpperCase() !== 'AE' ? '9900000099' : text(buyer.electronic_address), scheme: buyer.routing === 'uae_fallback' && text(buyer.country || customer.country).toUpperCase() === 'AE' ? '0235' : buyer.routing === 'export_fallback' && text(buyer.country || customer.country).toUpperCase() !== 'AE' ? '0235' : text(buyer.scheme), registrationNumber: text(buyer.registration_number), registrationType: text(buyer.registration_type), authority: text(buyer.registration_authority), passportCountry: text(buyer.passport_country), routing: text(buyer.routing), type: text(buyer.type) };
+  const buyerCountry = invoiceCountryCode(text(buyer.country) || customer.country);
+  const buyerData: Row = { name: text(customer.company_name || customer.name || customer.alias), address: text(customer.street_address), city: text(customer.city), subdivision: text(customer.state), country: buyerCountry, vatNumber: text(customer.vat_trn), tin: text(buyer.tin), electronicAddress: buyer.routing === 'uae_fallback' && buyerCountry === 'AE' ? '9900000098' : buyer.routing === 'export_fallback' && buyerCountry !== 'AE' ? '9900000099' : text(buyer.electronic_address), scheme: buyer.routing === 'uae_fallback' && buyerCountry === 'AE' ? '0235' : buyer.routing === 'export_fallback' && buyerCountry !== 'AE' ? '0235' : text(buyer.scheme), registrationNumber: text(buyer.registration_number), registrationType: text(buyer.registration_type), authority: text(buyer.registration_authority), passportCountry: text(buyer.passport_country), routing: text(buyer.routing), type: text(buyer.type) };
   require(buyerData.type === 'business', 'buyer.type', 'Confirm a business customer. Consumer or unclear transactions need separate scope review.');
   for (const field of ['name','address','city']) require(!!buyerData[field], `buyer.${field}`, `Complete the customer’s ${field}.`);
-  require(/^[A-Z]{2}$/.test(text(buyerData.country)), 'buyer.country', 'Use a two-letter country code, such as AE or AT.');
+  require(/^[A-Z]{2}$/.test(text(buyerData.country)), 'buyer.country', 'Use a two-letter buyer country code, such as AE or AT.');
   if (buyerData.country === 'AE') {
     require(!!buyerData.subdivision, 'buyer.subdivision', 'Complete the customer’s emirate.');
     if (buyer.routing === 'uae_fallback') {

@@ -216,3 +216,46 @@ test('linked deductions must match the source invoice scope and amounts at issua
     await db.close();
   }
 });
+
+test('linked UAE credit drafts reuse original metadata and issue with their signed total', async () => {
+  const db = await database();
+  try {
+    await db.exec(await readinessSql());
+    await db.exec(await readFile(new URL('../supabase/manual/029_move_terms_and_header_to_documents.sql',import.meta.url),'utf8'));
+    for (const name of ['20261116120000_allow_invoice_deduction_lines.sql','20261118120000_reuse_original_invoice_credit_details.sql']) {
+      await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
+    }
+    await db.exec(`alter table counterparties add column company_name text,add column street_address text,add column city text,add column country text;
+      update counterparties set company_name='Buyer GmbH',street_address='Two Street',city='Vienna',country='Austria',
+        einvoice_profile='{"type":"business","registration_number":"FN123","registration_type":"foreign_business","routing":"export_fallback"}';
+      update company_legal_profiles set state_region='DXB',trade_licence_number='TL-1',licensing_authority='DIEZ',
+        tax_identification_number=null,vat_number=null,corporate_tax_number='105048716200001';`);
+    await db.query('select save_einvoice_settings($1,$2::jsonb)',[w1,'{"vat_status":"not_registered","tin":"1050487162"}']);
+    const original=(await db.query(`insert into sales_documents(workspace_id,document_type,customer_id,issue_date,due_date,currency,subtotal,tax_total,total)
+      values($1,'invoice',$2,'2027-01-01','2027-01-15','AED',100,0,100) returning id`,[w1,customer])).rows[0].id;
+    const line=(await db.query(`insert into sales_document_lines(workspace_id,document_id,line_no,description,quantity,unit,unit_price,net_amount,vat_amount,gross_amount)
+      values($1,$2,1,'Consulting',1,'hour',100,100,0,100) returning id`,[w1,original])).rows[0].id;
+    const metadata=commercialContext().metadata;
+    metadata.lines={[line]:{unit_code:'HUR'}};
+    metadata.details.delivery.countryCode=' at ';
+    await db.query('select save_einvoice_metadata($1,$2::jsonb)',[original,JSON.stringify(metadata)]);
+    await db.query('select issue_sales_document($1)',[original]);
+    const credit=(await db.query("select create_credit_note($1,1,'2027-01-02') as id",[original])).rows[0].id;
+    await db.query('select save_einvoice_metadata($1,$2::jsonb)',[credit,
+      JSON.stringify({buyer:{country:' AT '},details:{delivery:{countryCode:'AT'}}})]);
+    await db.query('select prepare_linked_credit_note($1,$2,$3)',[credit,'DL8.61.1.A','Supply cancelled']);
+    const copied=(await db.query("select m.buyer_reference,m.details->'delivery' as delivery,m.lines->l.id::text as item from einvoice_document_metadata m join sales_document_lines l on l.document_id=m.document_id where m.document_id=$1",[credit])).rows[0];
+    assert.equal(copied.buyer_reference,'FINANCE');
+    assert.equal(copied.item.unit_code,'HUR');
+    assert.equal(copied.delivery.line1,'Two Street');
+    assert.equal(copied.delivery.countryCode,'AT');
+    await db.query('select issue_sales_document($1)',[credit]);
+    const issued=(await db.query('select status,total from sales_documents where id=$1',[credit])).rows[0];
+    assert.equal(issued.status,'sent');
+    assert.equal(Number(issued.total),-100);
+    const replacement=(await db.query('select duplicate_invoice_as_draft($1) as id',[original])).rows[0].id;
+    const replacementMeta=(await db.query('select supply_date,buyer_reference from einvoice_document_metadata where document_id=$1',[replacement])).rows[0];
+    assert.equal(replacementMeta.supply_date,null);
+    assert.equal(replacementMeta.buyer_reference,'FINANCE');
+  } finally { await db.close(); }
+});

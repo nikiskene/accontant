@@ -1,14 +1,16 @@
+import {creditReasons,record} from '../features/einvoicing/details';
 import {InvoiceReadiness} from '../features/einvoicing/InvoiceReadiness';
 import { useEffect, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { Select } from '../components/Select';
 import { Modal } from '../components/Modal';
 import { loadDocumentLogo } from '../utils/documentLogo';
 import { createSalesDocumentPdf, pdfBase64, type SalesPdfTemplate } from '../utils/salesDocumentPdf';
 
-type Doc={id:string;workspace_id:string;template_id:string|null;document_type:string;document_number:string|null;issue_date:string;due_date:string|null;service_date:string|null;status:string;currency:string;subtotal:number;tax_total:number;total:number;amount_paid:number;header_text:string|null;terms_text:string|null;correction_pending_resend:boolean;revision_number:number;issuer_snapshot:any;customer_snapshot:any;customer:any;einvoice_data_snapshot?:any;einvoice_metadata?:any;bank_snapshot?:any};
+type Doc={id:string;workspace_id:string;template_id:string|null;document_type:string;document_number:string|null;issue_date:string;due_date:string|null;service_date:string|null;status:string;currency:string;subtotal:number;tax_total:number;total:number;amount_paid:number;header_text:string|null;terms_text:string|null;correction_pending_resend:boolean;revision_number:number;issuer_snapshot:any;customer_snapshot:any;customer:any;einvoice_data_required?:boolean;einvoice_data_snapshot?:any;einvoice_metadata?:any;bank_snapshot?:any};
 type Line={id:string;description:string;quantity:number;unit:string;unit_price:number;net_amount:number;vat_amount:number;gross_amount:number};
 
 export function SalesDocumentDetail({id}:{id:string}) {
@@ -18,6 +20,9 @@ export function SalesDocumentDetail({id}:{id:string}) {
   const [msg,setMsg]=useState('');
   const [fraction,setFraction]=useState('50');
   const [sending,setSending]=useState(false);
+  const [issuing,setIssuing]=useState(false);
+  const [creditCode,setCreditCode]=useState('');
+  const [creditReason,setCreditReason]=useState('');
   const [composeOpen,setComposeOpen]=useState(false);
   const [email,setEmail]=useState({to:'',cc:'',bcc:'',subject:'',body:''});
   const [template,setTemplate]=useState<(SalesPdfTemplate&{logo_path?:string|null})>({});
@@ -26,6 +31,41 @@ export function SalesDocumentDetail({id}:{id:string}) {
   const rpc=async(name:string,args:any)=>{const{error}=await supabase.rpc(name,args);if(error)setMsg(error.message);else{setMsg('Saved.');void load()}};
   const convert=()=>rpc('convert_quote_to_invoice',{p_quote_id:id,p_fraction:Number(fraction)/100,p_issue_date:new Date().toISOString().slice(0,10),p_due_date:null});
   const createCredit=async()=>{const input=prompt('Percentage of the original invoice to credit (1–100)', '100');if(input===null)return;const percentage=Number(input);if(!Number.isFinite(percentage)||percentage<=0||percentage>100){setMsg('Enter a percentage greater than 0 and no more than 100.');return;}const{data,error}=await supabase.rpc('create_credit_note',{p_invoice_id:id,p_fraction:percentage/100,p_issue_date:new Date().toISOString().slice(0,10)});if(error){setMsg(error.message);return;}window.history.pushState({},'',`/sales-documents/${data}`);window.dispatchEvent(new PopStateEvent('popstate'));};
+  useEffect(() => {
+    const metadata=record(doc?.einvoice_metadata);
+    setCreditCode(String(record(metadata.details).credit_reason_code || ''));
+    setCreditReason(String(metadata.credit_reason || ''));
+  }, [doc?.id]);
+  const issueCredit = async () => {
+    if (!doc || issuing) return;
+    setIssuing(true);
+    setMsg('');
+    try {
+      if (doc.einvoice_data_required) {
+        const prepared=await supabase.rpc('prepare_linked_credit_note',{
+          p_document_id:id,p_reason_code:creditCode,p_reason:creditReason.trim(),
+        });
+        if (prepared.error) throw prepared.error;
+      }
+      const issued=await supabase.rpc('issue_sales_document',{p_document_id:id});
+      if (issued.error) throw issued.error;
+      await load();
+      openComposer();
+      setMsg('Credit note issued. Review the email before sending.');
+    } catch (error) {
+      setMsg((error as {message?:string})?.message || 'Could not issue the credit note.');
+      await load();
+    } finally {
+      setIssuing(false);
+    }
+  };
+  const replacementDraft = async () => {
+    setMsg('');
+    const result=await supabase.rpc('duplicate_invoice_as_draft',{p_invoice_id:id});
+    if (result.error) return setMsg(result.error.message);
+    window.history.pushState({},'',`/new-quote?type=invoice&draft=${result.data}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
   const makePdf=async()=>{
     if(!doc)return null;
     try {
@@ -49,12 +89,27 @@ export function SalesDocumentDetail({id}:{id:string}) {
     <div className="bg-white border rounded-2xl p-4 sm:p-7">
       {doc.correction_pending_resend&&<div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><strong>Corrected version not yet resent.</strong> Use Compose email to deliver the corrected PDF to the customer.</div>}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between"><div><p className="text-sm uppercase text-gray-500">{doc.document_type.replace('_',' ')}</p><h1 className="text-3xl font-bold">{doc.document_number||'Draft'}</h1>{workspace?.country==='AE'&&doc.document_type!=='quote'&&<a className="inline-block text-blue-700 underline py-2" href={`/e-invoicing?document=${doc.id}`}>Prepare electronic invoice / Docflow check · Powered by DocFlow</a>}<div className="mt-2 text-sm text-gray-600"><p className="font-medium text-gray-800">{customer.company_name||customer.alias}</p>{customer.street_address&&<p>{customer.street_address}</p>}{(customer.zip||customer.city)&&<p>{[customer.zip,customer.city].filter(Boolean).join(' ')}</p>}{customer.country&&<p>{customer.country}</p>}{customer.vat_trn&&<p>UID / VAT ID: {customer.vat_trn}</p>}</div></div><div className="sm:text-right"><span className="capitalize bg-gray-100 px-3 py-1 rounded">{doc.status.replace('_',' ')}</span><p className="text-2xl font-bold mt-3">{doc.currency} {Number(doc.total).toFixed(2)}</p>{doc.document_type==='invoice'&&Number(doc.amount_paid)>0&&<p className="text-sm text-gray-600">Paid {doc.currency} {Number(doc.amount_paid).toFixed(2)} · Open {doc.currency} {Math.max(0,Number(doc.total)-Number(doc.amount_paid)).toFixed(2)}</p>}</div></div>
-      {workspace?.country==='AE'&&doc.status==='draft'&&doc.document_type!=='quote'&&<InvoiceReadiness documentId={doc.id}/>}
+      {workspace?.country==='AE'&&doc.status==='draft'&&doc.document_type==='invoice'&&<InvoiceReadiness documentId={doc.id}/>}
+      {doc.document_type==='credit_note'&&doc.status==='draft'&&doc.einvoice_data_required&&
+        <div className="mt-5 space-y-3 rounded-lg border p-4">
+          <p className="text-sm">The credit note reuses details from the original invoice. Choose a reason to continue.</p>
+          <Select label="Credit note reason" value={creditCode} onChange={e=>{
+            const code=e.target.value;
+            setCreditCode(code);
+            setCreditReason(creditReasons[code as keyof typeof creditReasons] || '');
+          }}>
+            <option value="">Choose a reason</option>
+            {Object.entries(creditReasons).map(([code,label])=><option key={code} value={code}>{label}</option>)}
+          </Select>
+          <Input label="Reason explanation" value={creditReason} onChange={e=>setCreditReason(e.target.value)}/>
+        </div>}
+      {doc.document_type==='invoice'&&doc.status!=='void'&&doc.einvoice_data_snapshot&&
+        <p className="mt-4 text-sm text-gray-600">To change the service date on this issued invoice, issue a linked credit note and create a replacement draft.</p>}
       {doc.header_text&&<div className="mt-6 rounded-lg bg-gray-50 p-3 text-sm font-medium whitespace-pre-line">{doc.header_text}</div>}
       {doc.service_date&&<p className="mt-4 text-sm"><span className="font-semibold">Service date:</span> {doc.service_date}</p>}
       <div className="overflow-x-auto"><table className="w-full min-w-[620px] mt-8"><thead className="text-left text-xs uppercase text-gray-500"><tr><th className="py-3">Description</th><th>Qty</th><th>Unit price</th><th>Tax</th><th className="text-right">Total</th></tr></thead><tbody>{lines.map(line=><tr key={line.id} className="border-t"><td className="py-3">{line.description}</td><td>{line.quantity} {line.unit}</td><td>{Number(line.unit_price).toFixed(2)}</td><td>{Number(line.vat_amount).toFixed(2)}</td><td className="text-right">{Number(line.gross_amount).toFixed(2)}</td></tr>)}</tbody></table></div>
       {doc.terms_text&&<div className="mt-6 text-sm"><p className="font-semibold">Payment terms</p><p className="mt-1 whitespace-pre-line text-gray-600">{doc.terms_text}</p></div>}
-      <div className="flex flex-wrap justify-end gap-2 mt-7"><Button variant="secondary" onClick={download}>Download PDF</Button>{workspace?.country==='AE'&&['invoice','credit_note'].includes(doc.document_type)&&<Button variant="secondary" onClick={()=>{window.history.pushState({},'',`/e-invoicing?document=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Check e-invoicing readiness</Button>}{doc.document_type==='invoice'&&!['draft','void'].includes(doc.status)&&<Button variant="secondary" onClick={()=>{window.history.pushState({},'',`/correct-invoice?id=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Correct invoice</Button>}{doc.status!=='draft'&&doc.status!=='void'&&<Button onClick={openComposer}>Compose email</Button>}{doc.document_type==='invoice'&&!['draft','void'].includes(doc.status)&&<Button variant="secondary" onClick={createCredit}>Create credit note</Button>}{doc.status==='draft'&&<><Button variant="danger" onClick={remove}>Delete draft</Button>{doc.document_type==='credit_note'?<Button onClick={()=>rpc('issue_sales_document',{p_document_id:id})}>Issue credit note</Button>:<Button onClick={()=>{window.history.pushState({},'',`/new-quote?type=${doc.document_type}&draft=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Review layout &amp; issue</Button>}</>}{doc.document_type==='quote'&&doc.status==='sent'&&<Button onClick={()=>rpc('accept_quote',{p_quote_id:id})}>Accept quote</Button>}{doc.document_type==='quote'&&['accepted','partially_invoiced'].includes(doc.status)&&<div className="flex gap-2"><Input className="w-24" type="number" min="1" max="100" value={fraction} onChange={event=>setFraction(event.target.value)}/><Button onClick={convert}>Invoice %</Button></div>}</div>
+      <div className="flex flex-wrap justify-end gap-2 mt-7"><Button variant="secondary" onClick={download}>Download PDF</Button>{workspace?.country==='AE'&&['invoice','credit_note'].includes(doc.document_type)&&<Button variant="secondary" onClick={()=>{window.history.pushState({},'',`/e-invoicing?document=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Check e-invoicing readiness</Button>}{doc.document_type==='invoice'&&!doc.einvoice_data_snapshot&&!['draft','void'].includes(doc.status)&&<Button variant="secondary" onClick={()=>{window.history.pushState({},'',`/correct-invoice?id=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Correct invoice</Button>}{doc.status!=='draft'&&doc.status!=='void'&&<Button onClick={openComposer}>Compose email</Button>}{doc.document_type==='invoice'&&!['draft','void'].includes(doc.status)&&<Button variant="secondary" onClick={createCredit}>Create credit note</Button>}{doc.document_type==='invoice'&&doc.status!=='void'&&doc.einvoice_data_snapshot&&<Button variant="secondary" onClick={replacementDraft}>Create replacement draft</Button>}{doc.status==='draft'&&<><Button variant="danger" onClick={remove}>Delete draft</Button>{doc.document_type==='credit_note'?<Button disabled={issuing||Boolean(doc.einvoice_data_required&&(!creditCode||!creditReason.trim()))} onClick={issueCredit}>Issue credit note</Button>:<Button onClick={()=>{window.history.pushState({},'',`/new-quote?type=${doc.document_type}&draft=${id}`);window.dispatchEvent(new PopStateEvent('popstate'))}}>Review layout &amp; issue</Button>}</>}{doc.document_type==='quote'&&doc.status==='sent'&&<Button onClick={()=>rpc('accept_quote',{p_quote_id:id})}>Accept quote</Button>}{doc.document_type==='quote'&&['accepted','partially_invoiced'].includes(doc.status)&&<div className="flex gap-2"><Input className="w-24" type="number" min="1" max="100" value={fraction} onChange={event=>setFraction(event.target.value)}/><Button onClick={convert}>Invoice %</Button></div>}</div>
       {msg&&<p className="text-sm text-amber-700 mt-4">{msg}</p>}
     </div><Modal isOpen={composeOpen}onClose={()=>!sending&&setComposeOpen(false)}title={`Email ${doc.document_type.replace('_',' ')}`}size="lg"><div className="space-y-4"><Input type="email"required label="To"value={email.to}onChange={e=>setEmail({...email,to:e.target.value})}/><div className="grid gap-3 sm:grid-cols-2"><Input label="CC"placeholder="one@example.com, two@example.com"value={email.cc}onChange={e=>setEmail({...email,cc:e.target.value})}/><Input label="BCC"placeholder="one@example.com, two@example.com"value={email.bcc}onChange={e=>setEmail({...email,bcc:e.target.value})}/></div>{doc.document_type==='invoice'&&<p className="-mt-2 text-xs text-gray-500">Every invoice is automatically BCC’d to ns@iacy.com.</p>}<Input required label="Subject"value={email.subject}onChange={e=>setEmail({...email,subject:e.target.value})}/><div><label className="mb-1 block text-sm font-medium text-gray-700">Message</label><textarea required rows={10}value={email.body}onChange={e=>setEmail({...email,body:e.target.value})}className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/></div><p className="text-xs text-gray-500">Separate multiple recipients with commas. The PDF is attached automatically and the email is recorded in the audit trail.</p><div className="flex flex-wrap justify-end gap-2"><Button variant="secondary"onClick={()=>setComposeOpen(false)}disabled={sending}>Cancel</Button><Button onClick={send}disabled={sending}>{sending?'Sending…':'Send email with PDF'}</Button></div></div></Modal>
   </div>;

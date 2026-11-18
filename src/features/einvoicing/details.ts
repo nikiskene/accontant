@@ -2,6 +2,12 @@ import type {Context, Finding, Row} from './core.ts';
 
 export const record = (value: unknown): Row => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
 const text = (value: unknown) => value == null ? '' : String(value).trim();
+export function invoiceCountryCode(value: unknown): string {
+  const country = String(value ?? '').trim().toUpperCase();
+  if (country === 'AUSTRIA' || country === 'ÖSTERREICH') return 'AT';
+  if (country === 'UNITED ARAB EMIRATES' || country === 'UAE') return 'AE';
+  return country;
+}
 export const creditReasons = {
   'DL8.61.1.A': 'Supply cancelled',
   'DL8.61.1.B': 'Tax treatment changed',
@@ -35,7 +41,7 @@ export function conditionalFindings(context: Context, buyer: Row, nonVat: boolea
   }
   if (details.tax_point_date) require(!credit && date(details.tax_point_date) && text(details.tax_point_date) < text(context.document.issue_date), 'tax_point_date', 'A separate VAT point date must precede the issue date and cannot be used on a credit note.');
   const delivery = record(details.delivery);
-  if (Object.values(delivery).some(v=>!!text(v))) require(/^[A-Z]{2}$/.test(text(delivery.countryCode)), 'delivery.countryCode', 'Use a two-letter delivery country code.');
+  if (Object.values(delivery).some(v=>!!text(v))) require(/^[A-Z]{2}$/.test(invoiceCountryCode(delivery.countryCode)), 'delivery.countryCode', 'Use a two-letter delivery country code.');
   if (nonVat || text(buyer.registrationNumber)) {
     require(!!text(buyer.registrationNumber) && !!text(buyer.registrationType), 'buyer.registration', 'Complete the buyer legal registration number and type.');
     // Foreign registrars use their actual type; do not relabel them as UAE trade licences.
